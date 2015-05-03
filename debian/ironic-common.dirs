@@ -1,0 +1,5 @@
+etc/ironic
+etc/ironic/rootwrap.d
+/var/lib/ironic
+/var/log/ironic
+/etc/ironic

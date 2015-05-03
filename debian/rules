@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+#export DH_VERBOSE=1
+
+include /usr/share/openstack-pkg-tools/pkgos.make
+
+%:
+	dh $@ --with python2,systemd
+
+ifeq (,$(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+override_dh_auto_test:
+	rm -rf .testrepository
+	testr init && \
+	set -e && \
+	TEMP_REZ=`mktemp -t` && \
+	TESTS_DIR=./ironic/tests/ testr run --subunit | tee $$TEMP_REZ | subunit2pyunit; \
+	rm -f $$TEMP_REZ
+endif
+
+override_dh_install:
+	cp etc/ironic/ironic.conf.sample etc/ironic/ironic.conf
+	dh_install --fail-missing
+
+get-orig-source:
+	uscan --verbose --force-download --rename --destdir=../build-area
+
+override_dh_clean:
+	dh_clean
+	rm -f debian/*.init debian/*.service debian/*.upstart

@@ -1,0 +1,25 @@
+#!/bin/sh -e
+
+if [ "$1" = "configure" ] ; then
+    if ! getent group ironic > /dev/null 2>&1; then
+        addgroup --system ironic >/dev/null
+    fi
+
+    if ! getent passwd ironic > /dev/null 2>&1; then
+        adduser --system --home /var/lib/ironic --ingroup ironic --no-create-home --shell /bin/false ironic
+    fi
+
+    chown -R ironic:adm /var/log/ironic
+    chmod 0750 /var/log/ironic
+    mkdir -p /etc/ironic
+    mkdir -p /var/lib/ironic
+    default_db=/var/lib/ironic/ironic.db
+    if grep -q "^connection=sqlite:///$default_db" /etc/ironic/ironic.conf && [ ! -e /var/lib/ironic/ironic.db ]; then
+        ironic-dbsync create_schema
+    fi
+    chown ironic:ironic -R /var/lib/ironic /etc/ironic
+fi
+
+#DEBHELPER#
+
+exit 0

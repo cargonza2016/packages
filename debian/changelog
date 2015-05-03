@@ -1,0 +1,164 @@
+ironic (2015.1.0-0ubuntu1) vivid; urgency=medium
+
+  [ Chuck Short ]
+  * New upstream release for OpenStack Kilo. (LP: #1449744)
+  * debian/ironic-common.install: Dropped ironic-nova-bm-migrate. 
+
+  [ JJ Asghar ] 
+  * d/ironic-conductor.init.in: ironic-api -> ironic-conductor
+    (LP: #1429962). 
+
+ -- Chuck Short <zulcss@ubuntu.com>  Sun, 03 May 2015 13:50:22 -0400
+
+ironic (2015.1~rc1-0ubuntu1) vivid; urgency=medium
+
+  * New upstream milestone release:
+    - d/control: Align with upstream dependencies
+    - d/p/fix-requirements.patch: Dropped no longer needed.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Fri, 17 Apr 2015 09:28:31 -0400
+
+ironic (2015.1~b3-0ubuntu1) vivid; urgency=medium
+
+  * New upstream release.
+    + d/control: 
+      - Align with upstream dependencies.
+      - Add dh-python to build-dependencies.
+      - Add psmisc as a dependency. (LP: #1358820)
+    + d/p/fix-requirements.patch: Rediffed.
+    + d/ironic-conductor.init.in: Fixed typos in LSB headers,
+      thanks to JJ Asghar. (LP: #1429962)
+
+ -- Chuck Short <zulcss@ubuntu.com>  Mon, 30 Mar 2015 11:14:57 +0100
+
+ironic (2015.1~b2-0ubuntu1) vivid; urgency=medium
+
+  [ Corey Bryant ]
+  * New upstream release.
+    - d/control: Align with upstream dependencies.
+    - d/p/fix-requirements.patch: Added to drop websockify.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Fri, 13 Feb 2015 11:35:18 -0500
+
+ironic (2015.1~b1-0ubuntu4) vivid; urgency=medium
+
+  * Rebuild to pick up pkgos upstart generation fix.
+    - d/control: Bump openstack-pkg-tools to ensure upstart fix inclusion.
+
+ -- Corey Bryant <corey.bryant@canonical.com>  Wed, 14 Jan 2015 16:24:34 +0000
+
+ironic (2015.1~b1-0ubuntu3) vivid; urgency=medium
+
+  * No change rebuild to fixup detection of pysendfile dependency. 
+
+ -- James Page <james.page@ubuntu.com>  Mon, 12 Jan 2015 16:05:29 +0000
+
+ironic (2015.1~b1-0ubuntu2) vivid; urgency=medium
+
+  [ Chuck Short ]
+  * d/control: Update bzr branch locations.
+
+  [ James Page ]  
+  * d/pydist-overrides: Drop pysendfile from overrides to ensure that
+    dependencies are correctly generated (LP: #1391960). 
+  * Systemd enablement:
+    - d/control: Add dh-systemd and openstack-pkg-tools to BD's.
+    - d/rules: Enable use of pkgos, tidyup generated init files.
+    - d/*.init.in: Cherry pick pkgos template configurations from
+      Debian cinder package (thanks Thomas).
+    - d/*.upstart: Drop in preference to generated files.
+
+ -- James Page <james.page@ubuntu.com>  Mon, 12 Jan 2015 09:39:03 +0000
+
+ironic (2015.1~b1-0ubuntu1) vivid; urgency=medium
+
+  * New upstream beta release:
+    - d/control: Align version requirements with upstream release.
+  * d/watch: Update uversionmangle to deal with kilo beta versioning
+    changes.
+  * d/control: Bumped Standards-Version to 3.9.6, no changes.
+
+ -- James Page <james.page@ubuntu.com>  Mon, 05 Jan 2015 12:21:37 +0000
+
+ironic (2014.2-0ubuntu1) utopic; urgency=medium
+
+  [ Corey Bryant ]
+  * New upstream release.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Thu, 16 Oct 2014 17:02:24 -0400
+
+ironic (2014.2~rc2-0ubuntu1) utopic; urgency=medium
+
+  [ Corey Bryant ]
+  * New upstream release candidate.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Thu, 09 Oct 2014 16:13:56 -0400
+
+ironic (2014.2~rc1-0ubuntu1) utopic; urgency=medium
+
+  [ Adam Gandelman ]
+  * New upstream release.
+  * debian/patches/set_logdir.patch: Renamed to set_config_defaults.patch,
+    also set default sqlite db connection.
+  * debian/control: Refreshed dependencies for Juno, wrap-and-sort.
+  * debian/ironic-common.install: Added ironic-nova-bm-migrate binary.
+  * debian/ironic-common.postinst: Create the default sqlite database if
+    configured to use it and it does not exist.
+  * debian/pydist-overrides: Add pysendfile.
+  * debian/ironic_sudoers: Add rootwrap.conf (LP: #1185019).
+
+  [ James Page ]
+  * d/rules,control: Increase test verbosity using subunit.
+
+ -- Adam Gandelman <adamg@ubuntu.com>  Tue, 30 Sep 2014 10:44:08 -0700
+
+ironic (2014.2~b1-0ubuntu1) utopic; urgency=medium
+
+  * New upstream release.
+  * debian/control: Open up juno release
+  * debian/patches/set_logdir.patch: Refreshed.
+  * debian/control: Add python-oslo.messaging
+  * debian/control: Add python-sendfile.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Mon, 07 Jul 2014 08:29:14 -0400
+
+ironic (2014.1~rc1-0ubuntu1) trusty; urgency=medium
+
+  [ Adam Gandelman ]
+  * debian/ironic-common.postinst: Fix syntax preventing postinst
+    from running.
+  * debian/ironic-api.install: Create missing .install, install
+    ironic-api to /usr/bin/ironic-api.
+  * debian/patches/set_logdir.patch: Set log_dir to /var/log/ironic/ in
+    sample config, causing both daemons to log to respective files there.
+  * debian/{rules, ironic-common.install}: Install ironic.conf.sample
+    as /etc/ironic/ironic.conf.
+  * Fail build if test suite fails, limit testing concurrency to 1.
+  * debian/control: Add missing alembic, python-lockfile dependencies.
+
+  [ James Page ]
+  * d/control: Add Vcs-* fields for ubuntu-server-dev branches.
+
+ -- Adam Gandelman <adamg@ubuntu.com>  Fri, 04 Apr 2014 11:54:02 -0700
+
+ironic (2014.1~b3-0ubuntu1) trusty; urgency=medium
+
+  * New upstream release:
+    - debian/patches/fix-requirements.patch: Dropped no longer needed.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Thu, 06 Mar 2014 13:23:35 -0500
+
+ironic (2014.1~b2-0ubuntu1) trusty; urgency=medium
+
+  * New upstream release.
+  * debian/control: Add python-oslo.rootwrap.
+  * debian/patches/fix-requirements.patch: Adjust dependencies
+    for sqlalchemy and webob.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Fri, 24 Jan 2014 09:44:07 -0500
+
+ironic (0.0~git20140117-0ubuntu1) trusty; urgency=low
+
+  * Initial release.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Fri, 17 Jan 2014 09:47:33 -0500
