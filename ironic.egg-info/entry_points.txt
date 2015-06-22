@@ -1,0 +1,47 @@
+[console_scripts]
+ironic-api = ironic.cmd.api:main
+ironic-conductor = ironic.cmd.conductor:main
+ironic-dbsync = ironic.cmd.dbsync:main
+ironic-rootwrap = oslo_rootwrap.cmd:main
+
+[ironic.database.migration_backend]
+sqlalchemy = ironic.db.sqlalchemy.migration
+
+[ironic.dhcp]
+neutron = ironic.dhcp.neutron:NeutronDHCPApi
+none = ironic.dhcp.none:NoneDHCPApi
+
+[ironic.drivers]
+agent_ilo = ironic.drivers.ilo:IloVirtualMediaAgentDriver
+agent_ipmitool = ironic.drivers.agent:AgentAndIPMIToolDriver
+agent_pyghmi = ironic.drivers.agent:AgentAndIPMINativeDriver
+agent_ssh = ironic.drivers.agent:AgentAndSSHDriver
+agent_vbox = ironic.drivers.agent:AgentAndVirtualBoxDriver
+fake = ironic.drivers.fake:FakeDriver
+fake_agent = ironic.drivers.fake:FakeAgentDriver
+fake_amt = ironic.drivers.fake:FakeAMTDriver
+fake_discoverd = ironic.drivers.fake:FakeIPMIToolDiscoverdDriver
+fake_drac = ironic.drivers.fake:FakeDracDriver
+fake_iboot = ironic.drivers.fake:FakeIBootDriver
+fake_ilo = ironic.drivers.fake:FakeIloDriver
+fake_ipminative = ironic.drivers.fake:FakeIPMINativeDriver
+fake_ipmitool = ironic.drivers.fake:FakeIPMIToolDriver
+fake_irmc = ironic.drivers.fake:FakeIRMCDriver
+fake_pxe = ironic.drivers.fake:FakePXEDriver
+fake_seamicro = ironic.drivers.fake:FakeSeaMicroDriver
+fake_snmp = ironic.drivers.fake:FakeSNMPDriver
+fake_ssh = ironic.drivers.fake:FakeSSHDriver
+fake_vbox = ironic.drivers.fake:FakeVirtualBoxDriver
+iscsi_ilo = ironic.drivers.ilo:IloVirtualMediaIscsiDriver
+pxe_amt = ironic.drivers.pxe:PXEAndAMTDriver
+pxe_drac = ironic.drivers.drac:PXEDracDriver
+pxe_iboot = ironic.drivers.pxe:PXEAndIBootDriver
+pxe_ilo = ironic.drivers.pxe:PXEAndIloDriver
+pxe_ipminative = ironic.drivers.pxe:PXEAndIPMINativeDriver
+pxe_ipmitool = ironic.drivers.pxe:PXEAndIPMIToolDriver
+pxe_irmc = ironic.drivers.pxe:PXEAndIRMCDriver
+pxe_seamicro = ironic.drivers.pxe:PXEAndSeaMicroDriver
+pxe_snmp = ironic.drivers.pxe:PXEAndSNMPDriver
+pxe_ssh = ironic.drivers.pxe:PXEAndSSHDriver
+pxe_vbox = ironic.drivers.pxe:PXEAndVirtualBoxDriver
+
