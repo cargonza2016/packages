@@ -66,8 +66,8 @@ Build-Depends:
  subunit,
  testrepository (>= 0.0.18),
 Standards-Version: 3.9.6
-Vcs-Browser: http://bazaar.launchpad.net/~ubuntu-server-dev/ironic/kilo/files
-Vcs-Bzr: https://code.launchpad.net/~ubuntu-server-dev/ironic/kilo
+Vcs-Browser: https://git.launchpad.net/~ubuntu-server-dev/ubuntu/+source/ironic
+Vcs-Git: git://git.launchpad.net/~ubuntu-server-dev/ubuntu/+source/ironic
 
 Package: python-ironic
 Architecture: all
