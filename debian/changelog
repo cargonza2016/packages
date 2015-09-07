@@ -1,11 +1,11 @@
-ironic (1:4.0.0-0ubuntu1) UNRELEASED; urgency=medium
+ironic (1:4.0.0-0ubuntu1) wily; urgency=medium
 
   * New upstream release for OpenStack liberty.
   * d/watch: Update to use tarballs.openstack.org.
   * Update (Build-)-Depends: for new upstream release.
   * d/p/*: Refresh.
 
- -- James Page <james.page@ubuntu.com>  Mon, 07 Sep 2015 08:44:53 +0100
+ -- James Page <james.page@ubuntu.com>  Mon, 07 Sep 2015 09:04:43 +0100
 
 ironic (2015.1.0-0ubuntu2) wily; urgency=medium
 
