@@ -1,5 +1,6 @@
-ironic (2015.1.0-0ubuntu3) UNRELEASED; urgency=medium
+ironic (1:4.0.0-0ubuntu1) UNRELEASED; urgency=medium
 
+  * New upstream release for OpenStack liberty.
   * d/watch: Update to use tarballs.openstack.org.
 
  -- James Page <james.page@ubuntu.com>  Mon, 07 Sep 2015 08:44:53 +0100
