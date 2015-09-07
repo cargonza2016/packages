@@ -1,14 +1,333 @@
 CHANGES
 =======
 
+4.0.0
+-----
+
+* Fix improper exception catching
+* Fix nits from 'HTTP constants' patch
+* Move tests into correct directories
+* Fix logging levels in do_node_deploy
+* Fix misspelling from "applicatin" to "application"
+* Updated from global requirements
+* Remove unneeded module variable '__all__'
+* Updated from global requirements
+* Change and edit of Ironic Installation Guide
+* Remove the --autofree option from boot.ipxe
+* Switch from deprecated timeutils.isotime
+* Fix "tox -egenconfig" by avoiding the MODULEPATH env variable
+* Improve logging for agent driver
+* Refactor the essential prop list of inspect driver
+* Reset clean_step if error occurs in CLEANWAIT
+* Fix bug sending sensor data for drivers w/o management
+* Replace HTTP 'magic numbers' with constants
+* Address final comments on update image cache based on update time
+* 'updated_at' field shows old value after resource is saved
+* Increase size of nodes.driver column
+* Add better dbapi support for querying reservation
+* Allow digits in IPA driver names
+* Updated from global requirements
+* Add documentation for iRMC virtual media driver
+* Add copyright notice to iRMC driver source code
+* Remove CONF.agent.agent_pxe_bootfile_name
+* Update single letter release names to full names
+* Enforce flake8 E711
+* Update docstring for agent deploy's take_over
+* Update cached images based on update time
+* Updated from global requirements
+* Add RAIDInterface for RAID configuration
+* get_supported_boot_devices() returns static device list
+* add ironic client and ironic inspector projects into contribution list
+* Updated from global requirements
+* Use the oslo_utils.timeutils 'StopWatch' class
+* Update the documentation to use IPA as deploy ramdisk
+* Inspector inspection fails due to node locked error
+* Prevent power actions when the node is in CLENWAIT state
+* Imported Translations from Transifex
+* Remove unnecessary trailing backslash in Installation Guide
+* Refactor some minor issues to improve code readability
+* Fix misspelling in comment
+* Make app.wsgi more like ironic.cmd.api
+* Migrate IronicObjectSerializer to subclass from oslo
+* Updated from global requirements
+* Fix warnings on doc builds
+* Change vagrant.yml to vagrant.yaml
+* Developer quickstart documentation fixes
+* Document configuring ironic-api behind mod_wsgi
+* Updated from global requirements
+* Add deprecation messages on the bash ramdisk endpoints
+* Document API versioning
+* Log configuration values as DEBUG, not INFO
+* Update ironic.conf.sample
+* Update ironic.conf.sample
+* Add information 'node_uuid' in debug logs to facilitate the reader's life
+* Clean up instance_uuid as part of the node's tear down
+* Fix a trusted boot test bug
+* Add more info level log to deploy_utils.work_on_disk() method
+* Fix broken agent virtual media drivers
+* Updated from global requirements
+* Fix apache wsgi import
+* Add raises docstring tag into object.Ports methods
+* Only take exclusive lock in sync_power_state if node is updated
+* Secure boot support for pxe_ilo driver
+* UCS: node-get-boot-device is failing for Cisco servers
+* grub2 bootloader support for uefi boot mode
+* Add Nova scheduler_tracks_instance_changes config to docs
+* enroll/verify/cleanwait in state machine diagram
+* Save and re-raise exception
+* Cache Keystone client instance
+* Refactor pxe - New PXEBoot and ISCSIDeploy interfaces
+* Don't prevent updates if power transition is in progress
+* Follow-on to b6ed09e297 to fix docstrings/comments
+* Make inspector driver test correctly
+* Allow inspector driver to work in standalone mode
+* Remove outdated TODO.rst file
+* Updated from global requirements
+* Introduce support for APC MasterSwitchPlus and Rack PDU
+* Allow agent lookup to directly accept node UUID
+* Add CLEANWAIT state
+* Allow updates in VERIFYING state
+* Allow deleting nodes in ENROLL state
+* Updated from global requirements
+* Fixes a testcase related to trusted boot in UEFI boot mode
+* Clarify inspection upgrade guide
+* Refactor refresh method in objects for reuse
+* Imported Translations from Transifex
+* Use utils.mkfs directly in deploy_utils
+* Updated from global requirements
+* Migrate ObjectListBase to subclass from the Oslo one
+* Clean up tftp files if agent deployed disk image
+* Don't do a premature reservation check in the provision API
+* Move the http_url and http_root to deploy config
+* Allow upgrading shared lock to an exclusive one
+* Fix the DEPLOYWAIT check for agent_* drivers
+* Add a missing comma in Vendor Methods of Developer Guide
+* Replacing dict.iteritems() with dict.items()
+* Updated from global requirements
+* db: use new EngineFacade feature of oslo.db
+* Address minor comments on the ENROLL patch
+* Remove requirements.txt from tox.ini deps
+* Updated from global requirements
+* Replace common.fileutils with oslo_utils.fileutils
+* Updated from global requirements
+* Switch to the oslo_utils.fileutils
+* Start using new ENROLL state
+* Add .idea to .gitignore
+* Periodically checks the status of nodes in DEPLOYING state
+* Add IPA support for iscsi_irmc driver
+* Updated from global requirements
+* Vagrant configuration generation now uses pymysql
+* Remove deprecated code for driver vendor passthru
+* Add DRAC BIOS config vendor passthru API
+* Use DEPLOYWAIT while waiting for agent to write image
+* Fix unittests due mock 1.1.0 release
+* Migrate RPC objects to oslo.versionedobjects Fields
+* Imported Translations from Transifex
+* Updated from global requirements
+* Mock the file creation for the GetConfigdriveTestCase tests
+* Address follow-up comments
+* Clear ilo_boot_iso before deploy for glance images
+* Enable translation for config option help messages
+* Replace is_hostname_safe with a better check
+* Initial oslo.versionedobjects conversion
+* Add whole disk image support for iscsi_irmc driver
+* Add localboot support for iscsi_irmc driver
+* Add iRMC Virtual Media Deploy module for iRMC Driver
+* add python-scciclient version number requirement
+* Remove db connection string env variable from tox.ini
+* Make use of tempdir configuration
+* Updated from global requirements
+* Fix failing unit tests under py34
+* Allow vendor methods to serve static files
+* Allow updates when node is on ERROR provision state
+* Add sequence diagrams for pxe_ipmi driver
+* Fix logging for soft power off failures
+* Mute ipmi debug log output
+* Validate IPMI protocol version for IPMIShellinaboxConsole
+* Image service should not be set in ImageCache constructor
+* Clean nodes stuck in DEPLOYING state when ir-cond restarts
+* Add ability to filter nodes by provision_state via API
+* Refactor check_allow_management_verbs
+* Add node fields for raid configuration
+* Switch to oslo.service
+* Fix "boot_mode_support" hyper link in Installation Guide
+* Log configuration options on ironic-conductor startup
+* Allow deleting even associated and active node in maintenance mode
+* Use oslo_log
+* Replace self.assertEqual(None,*) to self.assertIsNone()
+* Improve warning message in conductor.utils.node_power_action()
+* Add a new boot section 'trusted_boot' for PXE
+* use versionutils from oslo_utils
+* Make task_manager logging more helpful
+* Add IPMI 1.5 support for the ipmitool power driver
+* Add iBoot driver documentation
+* Updated from global requirements
+* Add unit test for ilo_deploy _configure_vmedia_boot()
+* Do not use "private" attribute in AuthTokenMiddleware
+* API: Get a subset of fields from Ports and Chassis
+* Save disk layout information when deploying
+* Add ENROLL and related states to the state machine
+* Refactor method to add or update capability string
+* Use LOGDIR instead of SCREEN_LOGDIR in docs
+* Always allow removing instance_uuid from node in maintenance mode
+* API: Get a subset of fields from Nodes
+* Switch from MySQL-python to PyMySQL
+* Updated from global requirements
+* copy editing of ironic deploy docs
+* Transition state machine to use automaton oslo lib
+* Finish switch to inspector and inspector-client
+* Rename ilo_power._attach_boot_iso to improve readability
+* Expose current clean step in the API
+* Fix broken ACL tests
+* Add option to configure passes in erase_devices
+* Refactor node's and driver's vendor passthru to a common place
+* Change return value of [driver_]vendor_passthru to dict
+* Add Wake-On-Lan driver documentation
+* Fixes a bug on the iLO driver tutorial
+* Address follow-up comments on ucs drivers
+* Added documentation to Vagrantfile
+* Updated from global requirements
+* Addresses UcsSdk install issue
+* Don't raise exception from set_failed_state()
+* Add disk layout check on re-provisioning
+* Add boot interface in Ironic
+* Fix Cisco UCS slow tests
+* Validate capability in properties and instance_info
+* Pass environment variables of proxy to tox
+* DRAC: fix set/get boot device for 11g
+* Enable flake8 checking of ironic/nova/*
+* Remove tools/flakes.py
+* Wake-On-Lan Power interface
+* IPA: Do a soft power off at the end of deployment
+* Remove unnecessary validation in PXE
+* Add additional logging around cleaning
+* remove unneeded sqlalchemy-migrate requirement
+* Add vendor-passthru to attach and boot an ISO
+* Updated from global requirements
+* Sync with latest oslo-incubator
+* Add pxe_ucs and agent_ucs drivers to manage Cisco UCS servers
+* Doc: Use --notest for creating venv
+* Updated from global requirements
+* Fix DRAC driver job completion detection
+* Add additional required RPMs to dev instructions
+* Update docs for usage of python-ironicclient
+* Install guide reflects changes on master branch
+* Remove auth token saving from iLO driver
+* Don't support deprecated drivers' vendor_passthru
+* Updated from global requirements
+* Enforce flake8 E123/6/7/8 in ironic
+* Change driver_info to driver_internal_info in conductor
+* Use svg as it looks better/scales better than png
+* Updated from global requirements
+* Use oslo config import methods for Keystone options
+* Add documentation for getting a node's console
+* fix node-get-console returns url always start with http
+* Update the config drive doc to replace deprecated value
+* Updated from global requirements
+* Remove bogus conditional from node_update
+* Prevent node delete based on provision, not power, state
+* Revert "Add simplegeneric to py34 requirements"
+* Do not save auth token on TFTP server in PXE driver
+* Updated from global requirements
+* Update iLO documentation for UEFI secure boot
+* ironic-discoverd is being renamed to ironic-inspector
+* Update doc "install from packages" section to include Red Hat
+* Improve strictness of iLO test cases error checking
+* Remove deprecated pxe_deploy_{kernel, ramdisk}
+* Get admin auth token for Glance client in image_service
+* Fix: iSCSI iqn name RFC violation
+* Update documentation index.rst
+* Update AMT Driver doc
+* Refactor ilo.common._prepare_floppy_image()
+* Do not add auth token in context for noauth API mode
+* DRAC: config options for retry values
+* Disable meaningless sort keys in list command
+* Update pyremotevbox documentation
+* Fix drac implementation of set_boot_device
+* Update to hacking 0.10.x
+* Prepare for hacking 0.10.x
+* Rename gendocs tox environment
+* Add simplegeneric to py34 requirements
+* Reduce AMT Driver's dependence on new release of Openwsman
+* Fixes some docstring warnings
+* Slight changes to Vagrant developer configs
+* Delete neutron ports when the node cleaning fails
+* Update docstring DHCPNotFound -> DHCPLoadError
+* Wrap all DHCP provider load errors
+* Add partition number to list_partitions() output fields
+* Added vagrant VM for developer use
+* Execute "parted" from root in list_partitions()
+* Remove unused CONF variable in test_ipminative.py
+* Ironic doesn't use cacert while talking to Swift
+* Fix chainloading iPXE (undionly.kpxe)
+* Updated from global requirements
+* Improve root partition size check in deploy_partition_image
+* ironic/tests/drivers: Add autospec=True and spec_set=
+* Fix and enhance "Exercising the Services Locally" docs
+* Fix typos in Ironic docs
+* Fix spelling error in docstring
+* Remove deprecated exceptions
+* Check temp dir is usable for ipmitool driver
+* Improve strictness of AMT test cases error checking
+* Improve strictness of iRMC test cases error checking
+* Fix Python 3.4 test failure
+* Remove unneeded usage of '# noqa'
+* Drop use of 'oslo' namespace package
+* Updated from global requirements
+* Specify environment variables needed for a standalone usage
+* Adds OCS Power and Management interfaces
+* Run tests in py34 environment
+* Adds docstrings to some functions in ironic/conductor/manager.py
+* Add section header to state machines page
+* Update config generator to use oslo released libs
+* Use oslo_log lib
+* Include graphviz in install prerequisites
+* Link to config reference in our docs
+* Adopt config generator
+* Remove cleanfail->cleaning from state diagram
+* Imported Translations from Transifex
+* Return HTTP 400 for invalid sort_key
+* Update the Vendor Passthru documentation
+* Add maintenance mode example with reason
+* Add logical name example to install-guide
+* Improve strictness of DRAC test cases error checking
+* Add a venv that can generate/write/update the states diagram
+* Log attempts while trying to sync power state
+* Disable clean_step if config option is set to 0
+* Improve iSCSI deployment logs
+* supports alembic migration for db2
+* Updated from global requirements
+* Update iLO documentation for capabilities
+
 2015.1.0
 --------
 
+* ironic/tests/drivers/amt: Add autospec=True to mocks
+* ironic/tests/drivers/irmc: Add spec_set & autospec=True
 * Updated from global requirements
+* ironic/tests/drivers/drac: Add spec_set= or autospec=True
+* Create a 3rd party mock specs file
 * Release Import of Translations from Transifex
+* Document how to configure Neutron with iPXE
+* Remove state transition: CLEANFAIL -> CLEANING
 * Remove scripts for migrating nova baremetal
+* Add a missing comma and correct some typos
+* Remove API reboot from cleaning docs
+* Remove scripts for migrating nova baremetal
+* Fixed is_glance_image(image_href) predicate logic
+* Rearrange some code in PXEDeploy.prepare
+* Fixes typo in ironic/api/hooks.py and removes unnecessary parenthesis
 * update .gitreview for stable/kilo
+* Add cleaning network docs
+* Remove ironic compute driver and sched manager
+* ironic/tests/drivers/ilo: Add spec= & autospec=True to mocks
+* Replace 'metrics' with 'meters' in option
+* Update some config option's help strings
+* document "scheduler_use_baremetal_filters" option in nova.conf
 * Fix heartbeat when clean step in progress
+* Fix heartbeat when clean step in progress
+* Update ilo drivers documentation for inspection
+* Open Liberty development
 
 2015.1.0rc1
 -----------
@@ -16,10 +335,12 @@ CHANGES
 * Local boot note about updated deploy ramdisk
 * Convert internal RPC continue_node_cleaning to a "cast"
 * iLO driver documentation for node cleaning
+* Fix typos in vendor-passthru.rst
 * Add Ceilometer to Ironic's Conceptual Architecture
 * Improve AMT driver doc
 * iLO driver documentation for UEFI secure boot
 * Fix for automated boot iso issue with IPA ramdisk
+* Update session headers during initialization of AgentClient
 * Agent driver fails without Ironic-managed TFTP
 * Add notes about upgrading juno->kilo to docs
 * Address comments on I5cc41932acd75cf5e9e5b626285331f97126932e
@@ -488,6 +809,11 @@ CHANGES
 * More helpful failure for tests on noexec /tmp
 * Update doc headers at end of Juno
 * Fix E131 PEP8 errors
+
+2014.2
+------
+
+* Add the PXE VendorPassthru interface to PXEDracDriver
 * Add documentation for iLO driver(s)
 * Enable E111 PEP8 check
 * Updated from global requirements
