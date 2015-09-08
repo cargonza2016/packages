@@ -2,6 +2,9 @@ ironic (1:4.0.0-0ubuntu3) wily; urgency=medium
 
   * d/control: Add runtime depedency on python-pymysql to ensure that
     upgrades from mysqldb work correctly.
+  * d/p/drop-objectlistbase.patch: Drop ObjectListBase inline with
+    upstream master branch, resolving FTBFS with oslo.versionedobjects
+    0.8.0.
 
  -- James Page <james.page@ubuntu.com>  Tue, 08 Sep 2015 12:58:44 +0100
 
