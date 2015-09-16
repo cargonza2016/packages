@@ -1,11 +1,68 @@
 CHANGES
 =======
 
+4.1.0
+-----
+
+* Add 4.1.0 release notes
+* Try to standardize retrieval of an Exception's description
+* Improve the ability to resolve capability value
+* Add supported environment 'VMware' to comments
+* Updated from global requirements
+* Remove policy 'admin' rule support
+* Handle missing is_whole_disk_image in pxe._build_pxe_config_options
+* Raise InvalidPrameterValue when ipmi_terminal_port is ''
+* Fix doc typo
+* Remove executable permission from irmc.py
+* agent_ilo fails to bring up instance
+* Updated from global requirements
+* Remove 'is_valid_event' method
+* Set boot device in PXE Boot interface method prepare_instance()
+* Revert "Do not overwrite the iPXE boot script on every deployment"
+* Add vendor interface to ipminative driver
+* Document nodes in enroll state, in install guide
+* Added CORS support middleware to Ironic
+* Refactor map_color()
+* Removes unused posix-ipc requirement
+* Prevent ilo drivers powering off active nodes during take over
+* Add release notes for 4.0.0
+* Clean up cleaning error handling on heartbeats
+* Use oslo.messaging serializers
+* Add RPC APIs for RAID configuration
+* Add new method validate_raid_config to RAIDInterface
+* Fix docker package name in Ubuntu 14.04 in Install Guide
+* Updated from global requirements
+* Do not overwrite the iPXE boot script on every deployment
+* Reset tempdir config option after NestedTempfile fixture applied
+* Remove unused dep discover from test reqs
+* Add deprecation warning to periodic tasks with parallel=False
+* Use six.text_type in parse_image_ref
+* Ensure that pass_deploy_info() always calls boot.prepare_instance()
+* Add minimum and maximum on port option
+* Update ironic.conf.sample with tox -egenconfig
+* Update documentation to install grub2 when creating the user image
+* Fix logging and exceptions messages in ipminative driver
+* Fix minor spelling/grammar errors
+* Put py34 first in the env order of tox
+* format links in the readme to work with the release notes tools
+* Periodically checks for nodes being cleaned
+* Add links for UEFI secure boot support to iLO driver documentation
+* Add cleanup in console utils tests
+* Follow up the nits in iRMC vmedia driver merged patch
+* Refactor agent driver with pxe boot interface
+* Update tests to reflect WSME 0.8 fixes
+* Remove ObjectListBase
+* Remove broken workaround code for old mock
+* Create a versions.py file
+* Improve comparison operators for api/controllers/base.py
+* Switch to post-versioning
+
 4.0.0
 -----
 
 * Fix improper exception catching
 * Fix nits from 'HTTP constants' patch
+* Use JsonEncoded{Dict,List} from oslo_db
 * Move tests into correct directories
 * Fix logging levels in do_node_deploy
 * Fix misspelling from "applicatin" to "application"
@@ -73,6 +130,7 @@ CHANGES
 * UCS: node-get-boot-device is failing for Cisco servers
 * grub2 bootloader support for uefi boot mode
 * Add Nova scheduler_tracks_instance_changes config to docs
+* Use automaton's converters/pydot
 * enroll/verify/cleanwait in state machine diagram
 * Save and re-raise exception
 * Cache Keystone client instance
