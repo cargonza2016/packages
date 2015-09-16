@@ -6,6 +6,7 @@ ChangeLog
 LICENSE
 MANIFEST.in
 README.rst
+RELEASE-NOTES
 Vagrantfile
 babel.cfg
 driver-requirements.txt
@@ -45,6 +46,7 @@ doc/source/images/deployment_steps.png
 doc/source/images/logical_architecture.png
 doc/source/images/states.svg
 doc/source/images_src/deployment_steps.svg
+doc/source/releasenotes/index.rst
 doc/source/webapi/v1.rst
 etc/apache2/ironic
 etc/ironic/ironic.conf.sample
@@ -83,6 +85,7 @@ ironic/api/controllers/v1/port.py
 ironic/api/controllers/v1/state.py
 ironic/api/controllers/v1/types.py
 ironic/api/controllers/v1/utils.py
+ironic/api/controllers/v1/versions.py
 ironic/api/middleware/__init__.py
 ironic/api/middleware/auth_token.py
 ironic/api/middleware/parsable_error.py
@@ -279,6 +282,7 @@ ironic/tests/api/v1/test_ports.py
 ironic/tests/api/v1/test_root.py
 ironic/tests/api/v1/test_types.py
 ironic/tests/api/v1/test_utils.py
+ironic/tests/api/v1/test_versions.py
 ironic/tests/cmd/__init__.py
 ironic/tests/cmd/test_dbsync.py
 ironic/tests/common/__init__.py
