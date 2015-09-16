@@ -1,11 +1,11 @@
-ironic (1:4.1.0-0ubuntu1) UNRELEASED; urgency=medium
+ironic (1:4.1.0-0ubuntu1) wily; urgency=medium
 
   * New upstream release.
   * Align (Build-)Depends with upstream.
   * d/p/*: Refresh.
   * d/p/drop-objectlistbase.patch: Drop, included upstream.
 
- -- James Page <james.page@ubuntu.com>  Wed, 16 Sep 2015 11:07:08 +0100
+ -- James Page <james.page@ubuntu.com>  Wed, 16 Sep 2015 11:48:17 +0100
 
 ironic (1:4.0.0-0ubuntu3) wily; urgency=medium
 
