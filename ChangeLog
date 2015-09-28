@@ -1,11 +1,69 @@
 CHANGES
 =======
 
+4.2.0
+-----
+
+* Cleanup of Translations
+* Update architecture docs to mention new driver interfaces
+* Add 4.2.0 release notes
+* Update docs for Fedora 22
+* Add i18n _ import to cimc common
+* Update proliantutils version required for L release
+* Use of 'the Bare Metal service' in guide
+* Update install guide to reflect latest code
+* Implement indirection_api
+* Add 'abort' to state machine diagram
+* Unit test environment setup clarification
+* Make end-points discoverable via Ironic API
+* Updated from global requirements
+* Allow unsetting node.target_raid_config
+* Allow abort for CLEANWAIT states
+* Clean up CIMC driver docs and comments
+* Add Cisco IMC PXE Driver
+* Fix final comments in RAID commits
+* Refactor agent {prepare,tear_down}_cleaning into deploy_utils
+* Handle unquoted node names from virt types
+* Fix iRMC vmedia deploy failure due to already attached image
+* Implement take_over for iscsi_ilo driver
+* Fix typo in vendor method dev documentation
+* Fix incorrect urls
+* Check image size before provisioning for agent driver
+* Help patch authors to remember to update version docs
+* Add constraint target to tox.ini
+* Add IPMINative vendor methods to *IPMINative drivers
+* Remove DictMatches custom matcher from unit tests
+* Imported Translations from Zanata
+* Remove unused object function
+* Use oslo.versionedobjects remotable decorators
+* Base IronicObject on VersionedObject
+* Update descriptions in RAID config schema
+* Document GET ...raid/logical_disk_properties
+* Convert functools.wraps() usage to six.wraps()
+* Remove comment about exception decorator
+* Replace metaclass registry with explicit opt-in registry from oslo
+* Add config option to override url for links
+* Fix iBoot test__switch_retries test to not waste time sleeping
+* Allow tftpd usage of '--secure' by using symlinks
+* Add support for inband raid configuration agent ramdisk
+* Agent supports post-clean-step operations
+* Update 'Installation Guide' for RHEL7/CentOS7/Fedora
+* Fix docs about --is-public parameter for glance image-create
+* Fix indentation of the console docs
+* Fix heading levels in the install-guide
+* Cache the description of RAID properties
+* Remove the hard dependency of swift from ilo drivers
+* Fix mistakes in comments
+* Updated from global requirements
+* Fix object field type calling conventions
+* Add version info for pyghmi in driver-requirements.txt
+
 4.1.0
 -----
 
 * Add 4.1.0 release notes
 * Try to standardize retrieval of an Exception's description
+* Add description how to restart ironic services in Fedora/RHEL7/CentOS7
 * Improve the ability to resolve capability value
 * Add supported environment 'VMware' to comments
 * Updated from global requirements
@@ -14,19 +72,24 @@ CHANGES
 * Raise InvalidPrameterValue when ipmi_terminal_port is ''
 * Fix doc typo
 * Remove executable permission from irmc.py
+* Add APIs for RAID configuration
 * agent_ilo fails to bring up instance
 * Updated from global requirements
 * Remove 'is_valid_event' method
 * Set boot device in PXE Boot interface method prepare_instance()
 * Revert "Do not overwrite the iPXE boot script on every deployment"
 * Add vendor interface to ipminative driver
+* When boot option is not persisted, set boot on next power on
 * Document nodes in enroll state, in install guide
 * Added CORS support middleware to Ironic
 * Refactor map_color()
 * Removes unused posix-ipc requirement
+* Add retry options to iBoot power driver
+* Trusted boot doc
 * Prevent ilo drivers powering off active nodes during take over
 * Add release notes for 4.0.0
 * Clean up cleaning error handling on heartbeats
+* Use vendor mixin in IPMITool drivers
 * Use oslo.messaging serializers
 * Add RPC APIs for RAID configuration
 * Add new method validate_raid_config to RAIDInterface
