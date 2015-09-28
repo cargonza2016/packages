@@ -1,6 +1,6 @@
 --- a/etc/ironic/ironic.conf.sample
 +++ b/etc/ironic/ironic.conf.sample
-@@ -140,7 +140,7 @@
+@@ -38,7 +38,7 @@
  # (Optional) The base directory used for relative --log-file
  # paths. (string value)
  # Deprecated group/name - [DEFAULT]/logdir
@@ -9,7 +9,7 @@
  
  # Use syslog for logging. Existing syslog format is DEPRECATED
  # and will be changed later to honor RFC5424. (boolean value)
-@@ -681,7 +681,7 @@
+@@ -701,7 +701,7 @@
  # Deprecated group/name - [DEFAULT]/sql_connection
  # Deprecated group/name - [DATABASE]/sql_connection
  # Deprecated group/name - [sql]/connection
