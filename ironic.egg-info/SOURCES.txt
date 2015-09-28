@@ -32,6 +32,7 @@ doc/source/dev/drivers.rst
 doc/source/dev/states.rst
 doc/source/dev/vendor-passthru.rst
 doc/source/drivers/amt.rst
+doc/source/drivers/cimc.rst
 doc/source/drivers/iboot.rst
 doc/source/drivers/ilo.rst
 doc/source/drivers/irmc.rst
@@ -207,6 +208,10 @@ ironic/drivers/modules/amt/management.py
 ironic/drivers/modules/amt/power.py
 ironic/drivers/modules/amt/resource_uris.py
 ironic/drivers/modules/amt/vendor.py
+ironic/drivers/modules/cimc/__init__.py
+ironic/drivers/modules/cimc/common.py
+ironic/drivers/modules/cimc/management.py
+ironic/drivers/modules/cimc/power.py
 ironic/drivers/modules/drac/__init__.py
 ironic/drivers/modules/drac/bios.py
 ironic/drivers/modules/drac/client.py
@@ -254,7 +259,6 @@ ironic/objects/conductor.py
 ironic/objects/fields.py
 ironic/objects/node.py
 ironic/objects/port.py
-ironic/objects/utils.py
 ironic/openstack/__init__.py
 ironic/openstack/common/__init__.py
 ironic/openstack/common/_i18n.py
@@ -263,7 +267,6 @@ ironic/tests/__init__.py
 ironic/tests/base.py
 ironic/tests/conf_fixture.py
 ironic/tests/fake_policy.py
-ironic/tests/matchers.py
 ironic/tests/policy_fixture.py
 ironic/tests/raid_constants.py
 ironic/tests/stubs.py
@@ -356,6 +359,10 @@ ironic/tests/drivers/amt/test_common.py
 ironic/tests/drivers/amt/test_management.py
 ironic/tests/drivers/amt/test_power.py
 ironic/tests/drivers/amt/test_vendor.py
+ironic/tests/drivers/cimc/__init__.py
+ironic/tests/drivers/cimc/test_common.py
+ironic/tests/drivers/cimc/test_management.py
+ironic/tests/drivers/cimc/test_power.py
 ironic/tests/drivers/drac/__init__.py
 ironic/tests/drivers/drac/bios_wsman_mock.py
 ironic/tests/drivers/drac/test_bios.py
