@@ -1,6 +1,7 @@
 ironic (1:4.3.0-0ubuntu1) UNRELEASED; urgency=medium
 
   * New upstream release for OpenStack Mitaka.
+  * Align (Build-)Depends with upstream.
 
  -- Corey Bryant <corey.bryant@canonical.com>  Thu, 17 Dec 2015 11:54:12 -0500
 
