@@ -1,15 +1,15 @@
 --- a/etc/ironic/ironic.conf.sample
 +++ b/etc/ironic/ironic.conf.sample
-@@ -38,7 +38,7 @@
- # (Optional) The base directory used for relative --log-file
- # paths. (string value)
+@@ -201,7 +201,7 @@
+ # paths. This option is ignored if log_config_append is set.
+ # (string value)
  # Deprecated group/name - [DEFAULT]/logdir
 -#log_dir=<None>
 +log_dir=/var/log/ironic
  
- # Use syslog for logging. Existing syslog format is DEPRECATED
- # and will be changed later to honor RFC5424. (boolean value)
-@@ -701,7 +701,7 @@
+ # (Optional) Uses logging handler designed to watch file
+ # system. When log file is moved or removed this handler will
+@@ -809,7 +809,7 @@
  # Deprecated group/name - [DEFAULT]/sql_connection
  # Deprecated group/name - [DATABASE]/sql_connection
  # Deprecated group/name - [sql]/connection
