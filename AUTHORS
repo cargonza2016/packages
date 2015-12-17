@@ -20,6 +20,7 @@ Arata Notsu <notsu@virtualtech.jp>
 Armando Migliaccio <amigliaccio@internap.com>
 Artem Rozumenko <artem_rozumenko@epam.com>
 Bernard Van De Walle <bernard@bvandewa.com>
+Bertrand Lallau <bertrand.lallau@gmail.com>
 Bob Ball <bob.ball@citrix.com>
 Boris Pavlovic <boris@pavlovic.me>
 Brian Elliott <brian.elliott@rackspace.com>
@@ -65,6 +66,7 @@ Erhan Ekici <erhan.ekici@gmail.com>
 Eric Guo <eric.guo@easystack.cn>
 Eric Windisch <eric@cloudscaling.com>
 Faizan Barmawer <faizan.barmawer@gmail.com>
+Fang Jinxing <jinxing.f@gmail.com>
 Fengqian Gao <fengqian.gao@intel.com>
 Ghe Rivero <ghe.rivero@hp.com>
 Ghe Rivero <ghe@debian.org>
@@ -82,6 +84,7 @@ IWAMOTO Toshihiro <iwamoto@valinux.co.jp>
 Ihar Hrachyshka <ihrachys@redhat.com>
 Ilya Pekelny <ipekelny@mirantis.com>
 Imre Farkas <ifarkas@redhat.com>
+Ionut Balutoiu <ibalutoiu@cloudbasesolutions.com>
 James E. Blair <jeblair@openstack.org>
 James Slagle <jslagle@redhat.com>
 Jason Kölker <jason@koelker.net>
@@ -101,17 +104,20 @@ Joshua Harlow <harlowja@yahoo-inc.com>
 Julia Kreger <juliaashleykreger@gmail.com>
 Julien Danjou <julien@danjou.info>
 Junya Akahira <J.Akahira@gmail.com>
+KATO Tomoyuki <kato.tomoyuki@jp.fujitsu.com>
 Kan <kansks@cn.ibm.com>
 Ken Igarashi <igarashik@nttdocomo.co.jp>
 Kun Huang <gareth@unitedstack.com>
 Kurt Taylor <krtaylor@us.ibm.com>
 Kurt Taylor <kurt.r.taylor@gmail.com>
 Kyle Stevenson <kyle@kylestevenson.me>
+Lilia <liliars@lsd.ufcg.edu.br>
 Lilia Sampaio <liliars@lsd.ufcg.edu.br>
 Lin Tan <lin.tan@intel.com>
 Lin Tan <tan.lin.good@gmail.com>
 Lucas Alvares Gomes <lucasagomes@gmail.com>
 Marco Morais <mmorais@yahoo-inc.com>
+Marcus Rafael <marcusrafael@lsd.ufcg.edu.br>
 Mario Villaplana <mario.villaplana@gmail.com>
 Mark Atwood <me@mark.atwood.name>
 Mark Goddard <mgoddard@cray.com>
@@ -124,6 +130,7 @@ Matt Joyce <matt.joyce@cloudscaling.com>
 Matt Keeann <matt.keenan@gmail.com>
 Matt Wagner <matt.wagner@redhat.com>
 Matthew Gilliard <matthew.gilliard@hp.com>
+Matthew Treinish <mtreinish@kortar.org>
 Max Lobur <max_lobur@mirantis.com>
 Max Lobur <max_lobur@outlook.com>
 Michael Davies <michael@the-davies.net>
@@ -134,6 +141,7 @@ Michael Turek <mjturek@linux.vnet.ibm.com>
 Michey Mehta michey.mehta@hp.com
 Mikhail Durnosvistov <mdurnosvistov@mirantis.com>
 Mikyung Kang <mkkang@isi.edu>
+Miles Gould <mgould@redhat.com>
 Mitsuhiro SHIGEMATSU <pshige@pshige.org>
 Mitsuhiro SHIGEMATSU <shigematsu.mitsuhiro@lab.ntt.co.jp>
 Monty Taylor <mordred@inaugust.com>
@@ -171,6 +179,7 @@ Sascha Peilicke <saschpe@gmx.de>
 Sascha Peilicke <speilicke@suse.com>
 Satoru Moriya <satoru.moriya.br@hitachi.com>
 Sean Dague <sdague@linux.vnet.ibm.com>
+Sean Dague <sean@dague.net>
 Serge Kovaleff <skovaleff@mirantis.com>
 Sergey Lukjanov <slukjanov@mirantis.com>
 Sergey Lupersolsky <slupers1@yahoo.com>
@@ -179,9 +188,11 @@ Sergey Nikitin <snikitin@mirantis.com>
 Sergey Vilgelm <sergey@vilgelm.info>
 Shane Wang <shane.wang@intel.com>
 Shilla Saebi <shilla.saebi@gmail.com>
+Shinn'ya Hoshino <shi-hoshino@yk.jp.nec.com>
 Shivanand Tendulker <stendulker@gmail.com>
 Shuangtai Tian <shuangtai.tian@intel.com>
 Shuichiro MAKIGAKI <shuichiro.makigaki@gmail.com>
+Shuquan Huang <huang.shuquan@99cloud.net>
 Sinval Vieira <sinvalneto01@gmail.com>
 Sirushti Murugesan <sirushti.murugesan@hp.com>
 Srinivasa Acharya <rsacharya@hp.com>
@@ -193,6 +204,7 @@ Tan Lin <tan.lin.good@gmail.com>
 Thiago Paiva <thiagop@lsd.ufcg.edu.br>
 Thierry Carrez <thierry@openstack.org>
 Tom Fifield <tom@openstack.org>
+Tony Breeds <tony@bakeyournoodle.com>
 Tushar Kalra <tushar@cloudscaling.com>
 Vic Howard <victor.r.howard@gmail.com>
 Victor Lowther <victor.lowther@gmail.com>
@@ -222,6 +234,7 @@ baiyuan <bybai@cn.ibm.com>
 chenglch <chenglch@cn.ibm.com>
 dekehn <dekehn@gmail.com>
 divakar-padiyar-nandavar <divakar.padiyar-nandavar@hp.com>
+dparalen <vetrisko@gmail.com>
 gaoxiaoyong <gaoxiaoyong@cn.fujitsu.com>
 jiangfei <jiangfei0622@huawei.com>
 jiangwt100 <wentian@unitedstack.com>
@@ -240,3 +253,4 @@ whaom <whaom@cn.ibm.com>
 whitekid <whitekid@gmail.com>
 yangxurong <yangxurong@huawei.com>
 yunhong jiang <yunhong.jiang@intel.com>
+zouyee <zounengren@cmss.chinamobile.com>

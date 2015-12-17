@@ -1,6 +1,194 @@
 CHANGES
 =======
 
+4.3.0
+-----
+
+* Fix awake AMT unit test
+* Fix bug where clean steps do not run
+* Add reno for AMT wakeup patch
+* Updating OneView driver requirements and docs
+* Correct the db connection string in dev-quickstart
+* test: Remove _BaseTestCase
+* Wake up AMT interface before send request
+* Fall back to old boot.ipxe behaviour if inc command is not found
+* Only mention IPA in the quick start and user guides for DevStack
+* Improve options help for image caching
+* Add troubleshooting docs for "no valid host found"
+* change mysql url in dev-quickstart doc
+* Extend FAQ with answer of how to create a new release note
+* Sync ironic.conf sample
+* Comment spelling error in ironic-images.filters file
+* Updated from global requirements
+* Add a developer FAQ
+* Add tests for RequestContextSerializer
+* Add a test to enforce object version bump correctly
+* force releasenotes warnings to be treated as errors
+* Avoid RequestContextSerializer from oslo.messaging
+* Follow up patch for the first commit of iRMC new boot I/F
+* Move iso8601 as a test dependency only
+* Catch up release notes for Mitaka
+* Move common code from ironic.conductor.manager to ironic.conductor.utils
+* Add deprecated config info in ironic.conf.sample
+* Add switch to enable/disable streaming raw images for IPA
+* SwiftAPI constructor should read CONF variables at runtime
+* Take over console session if enabled
+* Drop some outdated information from our quick start guide
+* Refactor IRMCVirtualMediaAgentDeploy by applying new BootInterface
+* Refactor IRMCVirtualMediaIscsiDeploy by applying new BootInterface
+* Updated from global requirements
+* Fix: Next cleaning hangs if the previous cleaning was aborted
+* Add clean up method for the DHCP factory
+* Add missing packages to dev-quickstart
+* Support arguments for clean step methods
+* Validate all tcp/udp port numbers
+* Add manual cleaning to state machine
+* Specifying target provision states in fsm
+* Use server_profile_template_uri at scheduling
+* Check shellinabox started successfully or not
+* Add SSL support to the Ironic API
+* Updated from global requirements
+* Use wsgi from oslo.service for Ironic API
+* Remove duplicated unit tests in test_manager
+* Get mandatory patch attrs from WSME properties
+* Add and document two new root device hints: wwn_{with, vendor}_extension
+* Sort root device hints when parsing
+* add "unreleased" release notes page
+* Follow up patch for 39e40ef12b016a1aeb37a3fe755b9978d3f9934f
+* Document 'erase_devices_iterations' config option
+* Update iLO documentation
+* Adds test case for the iscsi_ilo recreate boot iso
+* Refactor agent_ilo driver to use new boot interface
+* Updated from global requirements
+* Refactor iLO driver console interface into new module
+* Add reno for release notes management
+* Add choices to temp_url_endpoint_type config option
+* Fix oslo namespace in default log level
+* Remove __name__ attribute from WSME user types
+* refine the ironic installation guide
+* Revert "Add Pillow to test-requirements.txt"
+* Update etc/ironic/ironic.conf.sample
+* Make task parameter mandatory in get_supported_boot_devices
+* Follow up patch for Ib8968418a1835a4131f2f22fb3e4df5ecb9b0dc5
+* Check shellinabox process during stopping console
+* Add whole disk image creation command to Installation Guide
+* Fix docker.io bug in the Install Guide
+* Updated from global requirements
+* Node's last_error to show the actual error from sync_power_state
+* Updated from global requirements
+* Rename test_conductor_utils.py to test_utils.py
+* Follow up patch for 8c3e102fc5736bfcf98525ebab59b6598a69b428
+* Add agent_iboot entrypoint
+* Validate console port number in a valid range
+* iboot: add wait loop for pstate to activate
+* Don't reraise the exception in _set_console_mode
+* Check seamicro terminal port as long as it specified
+* Add missing unit tests for some PXE drivers
+* Validate the input of properties of nodes
+* Add documentation for Ceph Object Gateway support
+* Refactor iscsi_ilo driver to use new boot interface
+* Fix comments on DRAC BIOS vendor_passthru
+* cautiously fail on unhandled heartbeat exception
+* Add "agent_wol" (AgentAndWakeOnLanDriver)
+* Added unit tests for CORS middleware
+* Use oslo_config new type PortOpt for port options
+* Fix markup error in deploy/drivers.rst
+* Update the Configuration Reference to Liberty in doc
+* Updated from global requirements
+* Use self.__class__.X instead of self.X
+* Rename utils.py to mgr_utils.py to avoid namespace collision
+* XenAPI: Add support for XenServer VMs
+* Add PortOpt to config generator
+* Imported Translations from Zanata
+* Move hash_ring refresh logic out of sync_local_state
+* Move ironic.tests.unit.base to ironic.tests.base
+* Change required version of ImcSdk to 0.7.2
+* Add an iboot reboot_delay setting
+* iPXE document about the existence of prebuilt images
+* Fix a typo
+* Switched order of CORS middleware
+* DRAC BIOS vendor_passthru: enable rebooting the node
+* Replace deprecated LOG.warn with warning
+* Add db migration and model for tags table
+* Add OneView driver documentation
+* Fix snmp property descriptions
+* Updated from global requirements
+* Slightly reword README
+* Remove unused functions from agent driver
+* mocking syscalls to make the tests run on OS X
+* Enable cmd/api & cmd/conductor to be launched directly
+* Add reboot_delay option to snmp driver
+* Add self.raid for iSCSI based drivers
+* Move test_pxe.py inside unit/drivers/modules directory
+* Move pxe._parse_instance_info() to deploy_utils
+* Add note about driver API breakage
+* Fix a missing detail in install guide
+* Enable radosgw support in ironic
+* Updated from global requirements
+* Add agent_amt docs
+* Add release notes for 4.2.1
+* Convert set() to list in ListType
+* remove lxml requirement
+* Update python-oneviewclient version
+* Fix an annoying detail in the developer quick-start
+* Updated from global requirements
+* Expose versioning information on GET / endpoint
+* Fixes logging of failure in deletion of swift temporary object
+* ucs_hostname changed to ucs_address
+* Updated from global requirements
+* Remove functions: _cleanse_dict & format_message
+* Move FakeOneViewDriver to the fake.py module
+* Add testresources and testscenarios used by oslo.db fixture
+* Add agent_amt driver
+* Imported Translations from Zanata
+* Stop adding translation function to builtins
+* Fix tests giving erroneous output during os-testr run
+* OneView Driver for Ironic
+* Fix agent_ilo to remove temporary images
+* Updated from global requirements
+* iPXE: Fix assumption that ${mac} is the MAC of the NIC it's booting
+* Prevent iRMC unit test from potential failure at the gate
+* Add secret=True to password option
+* Fix a bug error by passwords only includes numbers
+* Add support for in-band cleaning in ISCSIDeploy
+* Fix typo in document
+* Remove unused import of oslo_log
+* Use power manager to reboot in agent deployments
+* Add retries to ssh._get_hosts_name_for_node
+* Refactor deploy_utils methods
+* Fix irmc driver unit test
+* PXE: Support Extra DHCP Options for IPv6
+* Use standard locale when executing 'parted' command
+* Updated from global requirements
+* To run a specific unit test with ostestr use -r
+* Add .eggs to gitignore
+* Fix log formatting issue in agent base
+* Add notes to functions which are in ironic-lib
+* Allow empty password for ipmitool console
+* Update help string on tftp_root option
+* Updated from global requirements
+* Fix conductor deregistration on non init conductor
+* Imported Translations from Zanata
+* Add Pillow to test-requirements.txt
+* Add agent inspection support for IPMI and SSH drivers
+* Python 3.4 unit tests fail with LANG=C
+* Fix ubuntu install command in install guide
+* Move unit tests to correct directory
+* Add 'whitelist_externals = bash' for two testenvs
+* Rename 'message' attribute to '_msg_fmt' in IronicException
+* Follow up for: Prepare for functional testing patch
+* Fix documentation for installing mariaDB
+* Update help strings for DRAC configs
+* Switch tox unit test command to use ostestr
+* Use standard locale when executing 'dd' command
+* Imported Translations from Zanata
+* Fix typo: add a missing white space
+* Prepare for functional testing
+* Fix some iBoot strings
+* Replace six.iteritems() with .items()
+* Make generation of ironic.conf.sample deterministic
+* Cached file should not be deleted if time equal to master
+
 4.2.0
 -----
 
@@ -32,6 +220,7 @@ CHANGES
 * Help patch authors to remember to update version docs
 * Add constraint target to tox.ini
 * Add IPMINative vendor methods to *IPMINative drivers
+* Fix string formatting issues
 * Remove DictMatches custom matcher from unit tests
 * Imported Translations from Zanata
 * Remove unused object function
