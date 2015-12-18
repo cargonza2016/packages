@@ -1,4 +1,4 @@
-ironic (1:4.3.0-0ubuntu1) UNRELEASED; urgency=medium
+ironic (1:4.3.0-0ubuntu1) xenial; urgency=medium
 
   * New upstream release for OpenStack Mitaka.
   * Align (Build-)Depends with upstream.
