@@ -1,6 +1,276 @@
 CHANGES
 =======
 
+5.1.0
+-----
+
+* Documentation update for partition image support
+* Append 'Openstack-Request-Id' header to the response
+* Add disk_label and node_uuid for agent drivers
+* Fix sphinx docs build
+* Agent: Out-of-band power off on deploy
+* Document partition image support with agent_ilo
+* Add support for partition images in agent drivers
+* Update the text in user guide of ironic
+* Translate requests exception to IronicException
+* Extend the Conductor RPC object
+* Make sure target state is cleared on stable states
+* Removes redundant "to"
+* Install apparmor b/c Docker.io has undeclared dep
+* Don't depend on existing file perm for qemu hook
+* Devstack: add check of chassis creating
+* Adds doc - firmware update(iLO) manual clean step
+* Add ensure_thread_contain_context() to task_manager
+* [devstack] Do not die if neutron is disabled
+* Follow-up of firmware update(iLO) as manual cleaning step
+* Updating driver docs with DL hardwares requirements
+* Remove unneeded 'wait=False' to be more clean and consistent
+* Pass region_name to SwiftAPI
+* Uses jsonschema library to verify clean steps
+* Fix important typo in the ipmitool documentation
+* DevStack: Allow configuring the authentication strategy
+* Add documentation for RAID
+
+5.0.0
+-----
+
+* Add documentation about the disk_label capability
+* SSH driver: Remove pipes from virsh's list_{all, running}
+* Add documentation for the IPMITool driver
+* Fix error in cleaning docs
+* Replace depricated tempest-lib with tempest.lib
+* Add new 'disk_label' capability
+* Fix JSON string in example of starting manual cleaning
+* Remove 'grub2' option in creating whole-disk-images
+* Update iRMC driver doc for inspection
+* Don't use token for glance & check for some unset vars
+* Use 'baremetal' flavor in devstack
+* [devstack] Fix IPA source build on Fedora
+* DevStack: Enable VirtualBMC logs
+* Support for passing CA certificate in Ironic Glance Communication
+* Updated from global requirements
+* Firmware update(iLO) as manual cleaning step
+* Updated from global requirements
+* Remove code duplication
+* Update iLO documentation for clean step 'reset_ilo'
+* Refactor the management verbs check to utils
+* Updated from global requirements
+* Remove duplicate doc in ironic.conf.sample
+* Prep for 5.0 release
+* Fix unittests after new releases of libraries
+* Updating docs with support for DL class servers
+* Update CIMC driver docs to install ImcSdk from PyPi
+* Add returns to send_raw() ipmitool function
+* Add function for dump SDR to ipmitool driver
+* Add clean step in iLO drivers to activate iLO license
+* Update proliantutils version to 2.1.7 for Mitaka release
+* ipxe: add --timeout parameter to kernel and initrd
+* Updated iLO driver documentation to recommend ipmitool version
+* Refactor driver loading to load a driver instance per node
+* Clean up driver loading in init_host
+* add wipefs to ironic-lib.filters
+* Updated from global requirements
+* Use assertEqual/Greater/Less/IsNone
+* Follow up nits of 3429e3824c060071e59a117c19c95659c78e4c8b
+* API to list nodes using the same driver
+* [devstack] set ipa-debug=1 for greater debugability
+* Loose python-oneviewclient version requirement
+* Set node last_error in TaskManager
+* Add possible values for config options
+* Follow up nits of irmc oob inspection
+* Enable removing name when updating node
+* Make some agent functions require exclusive lock
+* Add db api layer for CRUD operations on node tags
+* Update proliantutils version required for Mitaka release
+* Add deprecated_for_removal config info in ironic.conf.sample
+* Update ironic.conf.sample
+* Tolerate roles in context.RequestContext
+* Switch to Futurist library for asynchronous execution and periodic tasks
+* Move _from_db_object() into base class
+* Add ironic_tempest_plugin to the list of packages in setup.cfg
+* Fix gate broken by sudden remove of SERVICE_TENANT_NAME variable
+* Add manual cleaning to documentation
+* Import host option in base test module
+* Fixes automated cleaning failure in iLO drivers
+* Updated from global requirements
+* DevStack: Add support for deploying nodes with pxe_ipmitool
+* Change the libvirt NIC driver to virtio
+* DevStack: Support to install diskimage-builder from source
+* [Devstack]Add ability to enable ironic node pty console
+* Use 'node' directly in update_port()
+* Add links to the standalone configdrive documentation
+* DevStack: Install squashfs-tools
+* [DevStack] fix restart of nova compute
+* Use http_{root, url} config from "deploy" instead of "pxe"
+* During cleaning, store clean step index
+* Use oslo_config.fixture in unit tests
+* Introduce driver_internal_info in code-contribution-guide
+* Updated from global requirements
+* Correct instance parameter description
+* Add node.uuid to InstanceDeploy error message
+* Set existing ports pxe_enabled=True when adding pxe_enabled column
+* Augmenting the hashing strategy
+* Add hardware inspection module for iRMC driver
+* Document possible access problems with custom IRONIC_VM_LOG_DIR path
+* Add documentation for proxies usage with IPA
+* Updated from global requirements
+* Devstack: create endpoint in catalog unconditionally
+* Comment out test options that already exists on tempest's tree
+* Replace config 'clean_nodes' with 'automated_clean'
+* Remove 'zapping' from code
+* Cache agent clean steps on node
+* API to manually clean nodes
+* Replace ifconfig with ip
+* Updated iLO documentation for boot mode capability
+* Agent vendor handles manual cleaning
+* Remove downgrade support from migrations
+* Enable tinyipa for devstack Ironic
+* Disable clean step 'reset_ilo' for iLO drivers by default
+* Add proxy related parameters to agent driver
+* Update ironic.conf.samle
+* Fix genconfig "tempdir" inconsistency
+* Update the home page
+* Follow-up on dracclient refactor
+* Log warning if ipmi_username/ipmi_password missing
+* Add portgroups to support LAG interfaces - net
+* Add portgroups to support LAG interfaces - RPC
+* Add portgroups to support LAG interfaces - objs
+* Add portgroups to support LAG interfaces - DB
+* Fix missing lookup() vendor method error for pxe_drac
+* Refresh ssh verification mechanism
+* Refactor install-guide to configure API/Conductor seperately
+* Enable Ironic Inspector for Cisco Drivers
+* Fix doc8's "duplicated target names" (D000) error
+* Remove conditional checking the auth_strategy values
+* Extend root device hints to support device name
+* Fix spawn error hook in "continue_node_clean" RPC method
+* Enable doc8 style checker for *.rst files
+* Updated from global requirements
+* Show transitions initiated by API requests
+* Remove hard-coded DEPLOYWAIT timeout from Baremetal Scenario
+* Fix tiny format issue with install_guide
+* Add priority to manual clean step example
+* Use node uuid in some exception log
+* Fix error message in devstack
+* Updated from global requirements
+* [devstack] Restart nova compute before checking hypervisor stats
+* Imported Translations from Zanata
+* Fix minor typo
+* DRAC: cleanup after switch to python-dracclient
+* API service logs access requests again
+* Updated from global requirements
+* Correct port_id parameter description
+* Remove duplicate words in API version history
+* Remove unneeded enable_service in dev-quickstart.rst
+* Clarify that size in root device hints and local_gb are often different
+* Update ImcSdk requirement to use PyPi
+* Clean up 'no_proxy' unit tests
+* Add more unit tests for NO_PROXY validation
+* Add ability to cache swift temporary URLs
+* DRAC: switch to python-dracclient on vendor-passthru
+* Migrate Tempest tests into Ironic tree
+* Use Tempest plugin interface
+* Fix issues with uefi-ipxe booting
+* Update links to OpenStack manuals
+* Fix issue where system hostname can impact genconfig
+* Add choices option to several options
+* Reorganize the developer's main page
+* Document backwards compat for passthru methods
+* Drop MANIFEST.in - it's not needed pbr
+* Clean up unneeded deprecated_group
+* Devstack: replace 'http' with SERVICE_PROTOCOL
+* Clarify rejected status in RFE contribution docs
+* Bring UP baremetal bridge
+* Document the process of proposing new features
+* Updated from global requirements
+* Use assertTrue/False instead of assertEqual(T/F)
+* devstack 'cleanup-node' script should delete OVS bridges
+* Change default IRONIC_VM_SPECS_RAM to 1024
+* Remove release differences from flavor creation docs
+* Add documentation for standalone ilo drivers
+* Devstack: Make sure libvirt's hooks directory exists
+* Update the ironic.conf.sample file
+* Follow-up on refactor DRAC management interface
+* Allow user to set arch for the baremetal flavor and ironic node
+* tox: make it possible to run pep8 on current patch only
+* Devstack: Use [deploy] erase_devices_priority config option
+* Remove bashate from envlist
+* Use ironic-lib's util methods
+* Refactor objects into a magic registry
+* Don't return tracebacks in API response in debug mode
+* Updated from global requirements
+* Change assertTrue(isinstance()) by optimal assert
+* Remove */openstack/common* in tox
+* Remove vim headers in source files
+* Trival: Remove unused logging import
+* Use ironic-lib's qemu_img_info() & convert_image()
+* Update "Developer Quick-Start" guide for Fedora 23+
+* Enable ironic devstack plugin in local.conf sample
+* Correct a tiny issue in install-guide
+* Install 'shellinabox' package for Ironic
+* Fix translations in driver base
+* Run flake8 against the python scripts under tools/ and devstack/tools
+* Add UEFI support for iPXE
+* Add console feature to ssh driver
+* Conductor handles manual cleaning
+* Add extensions to the scripts at devstack/tools/ironic/scripts
+* Fix "No closing quotation" error when building with tox
+* Devstack: Remove QEMU hook at ./unstack
+* Run bashate as part of the pep8 command
+* Fix bashate errors in grenade plugin
+* Fix syntax errors in the shell scripts under devstack/tools
+* Use the apache-ironic.template from our tree
+* Fix typo in ironic/conductor/manager.py
+* genconfig: Debug info for unknown config types
+* Keep the console logs for all boots
+* Use imageutils from oslo.utils
+* Add documentation for user inputs as HTTPS URLs
+* Add bashate tox command
+* Updated from global requirements
+* Add documentation for swiftless intermediate images
+* DRAC: switch to python-dracclient on management interface
+* DRAC: switch to python-dracclient on power interface
+* Follow up nits of Exception to str type conversion
+* Clean up variables in plugin.sh
+* Replace assertEqual(None, *) with assertIsNone in tests
+* Add utility function to validate NO_PROXY
+* Add bifrost as an option projects in Service overview
+* Sequence diagrams for iLo driver documentation
+* Refactor ilo documentation for duplicate information
+* Update swift HTTPs information in ilo documentation
+* Updated from global requirements
+* Deprecated tox -downloadcache option removed
+* Remove override-defaults
+* Use 'service_type' of 'network'. Not 'neutron'
+* Update ironic.conf.sample by applying the bug fix #1522841
+* Add grenade plugin
+* Follow up patch to correct code-contribute-guide
+* Fix iPXE template for whole disk image
+* Add devstack plugin
+* Copy devstack code to ironic tree
+* Add FSM.is_stable() method
+* Explicitly depend on WebTest>=2.0
+* Always pass keystone credentials to neutronclient
+* Remove extra space in 'host' config comment
+* Add oslo_config.Opt support in Ironic config generator
+* Refactor disk partitioner code from ironic and use ironic-lib
+* Simplifies exception message assurance for oneview.common tests
+* Use node.uuid directly in stop_console()
+* Correct NotImplemented to NotImplementedError in rpcapi.py
+* Adding oneview.common tests for some method not well tested
+* Add port option support for ipmitool
+* Numerous debug messages due to iso8601 log level
+* Handle deprecated opts' group correctly
+* Updated from global requirements
+* Clarify what changes need a release note
+* Remove wsgi reset_pool_size_to_default test
+* Add Mitaka release notes page
+* Update python-scciclient version number
+* Add release notes from Icehouse to Liberty
+* Add Code Contribution Guide for Ironic
+* Replace HTTP 'magic numbers' with constants
+* Documentation points to official release notes
+
 4.3.0
 -----
 
@@ -9,6 +279,8 @@ CHANGES
 * Add reno for AMT wakeup patch
 * Updating OneView driver requirements and docs
 * Correct the db connection string in dev-quickstart
+* Split BaseConductorManager from ConductorManager
+* Validate arguments to clean_step() decorator
 * test: Remove _BaseTestCase
 * Wake up AMT interface before send request
 * Fall back to old boot.ipxe behaviour if inc command is not found

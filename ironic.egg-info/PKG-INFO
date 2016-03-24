@@ -1,8 +1,8 @@
 Metadata-Version: 1.1
 Name: ironic
-Version: 4.3.0
+Version: 5.1.0
 Summary: OpenStack Bare Metal Provisioning
-Home-page: http://www.openstack.org/
+Home-page: http://docs.openstack.org/developer/ironic/
 Author: OpenStack
 Author-email: openstack-dev@lists.openstack.org
 License: UNKNOWN

@@ -16,6 +16,7 @@ from oslo_config import cfg
 from oslo_log import log
 from oslo_utils import excutils
 from oslo_utils import units
+import six.moves.urllib_parse as urlparse
 
 from ironic.common import dhcp_factory
 from ironic.common import exception
@@ -29,6 +30,7 @@ from ironic.common import images
 from ironic.common import paths
 from ironic.common import raid
 from ironic.common import states
+from ironic.common import utils
 from ironic.conductor import task_manager
 from ironic.conductor import utils as manager_utils
 from ironic.drivers import base
@@ -53,7 +55,6 @@ agent_opts = [
     cfg.BoolOpt('manage_agent_boot',
                 default=True,
                 deprecated_name='manage_tftp',
-                deprecated_group='agent',
                 help=_('Whether Ironic will manage booting of the agent '
                        'ramdisk. If set to False, you will need to configure '
                        'your mechanism to allow booting the agent '
@@ -93,7 +94,27 @@ REQUIRED_PROPERTIES = {
     'deploy_ramdisk': _('UUID (from Glance) of the ramdisk with agent that is '
                         'used at deploy time. Required.'),
 }
-COMMON_PROPERTIES = REQUIRED_PROPERTIES
+
+OPTIONAL_PROPERTIES = {
+    'image_http_proxy': _('URL of a proxy server for HTTP connections. '
+                          'Optional.'),
+    'image_https_proxy': _('URL of a proxy server for HTTPS connections. '
+                           'Optional.'),
+    'image_no_proxy': _('A comma-separated list of host names, IP addresses '
+                        'and domain names (with optional :port) that will be '
+                        'excluded from proxying. To denote a doman name, use '
+                        'a dot to prefix the domain name. This value will be '
+                        'ignored if ``image_http_proxy`` and '
+                        '``image_https_proxy`` are not specified. Optional.'),
+}
+
+COMMON_PROPERTIES = REQUIRED_PROPERTIES.copy()
+COMMON_PROPERTIES.update(OPTIONAL_PROPERTIES)
+
+PARTITION_IMAGE_LABELS = ('kernel', 'ramdisk', 'root_gb', 'root_mb', 'swap_mb',
+                          'ephemeral_mb', 'ephemeral_format', 'configdrive',
+                          'preserve_ephemeral', 'image_type',
+                          'deploy_boot_mode')
 
 
 def build_instance_info_for_deploy(task):
@@ -107,7 +128,7 @@ def build_instance_info_for_deploy(task):
     """
     node = task.node
     instance_info = node.instance_info
-
+    iwdi = node.driver_internal_info.get('is_whole_disk_image')
     image_source = instance_info['image_source']
     if service_utils.is_glance_image(image_source):
         glance = image_service.GlanceImageService(version=2,
@@ -121,6 +142,10 @@ def build_instance_info_for_deploy(task):
         instance_info['image_disk_format'] = image_info['disk_format']
         instance_info['image_container_format'] = (
             image_info['container_format'])
+
+        if not iwdi:
+            instance_info['kernel'] = image_info['properties']['kernel_id']
+            instance_info['ramdisk'] = image_info['properties']['ramdisk_id']
     else:
         try:
             image_service.HttpImageService().validate_href(image_source)
@@ -132,6 +157,12 @@ def build_instance_info_for_deploy(task):
                               "is not reachable."), image_source)
         instance_info['image_url'] = image_source
 
+    if not iwdi:
+        instance_info['image_type'] = 'partition'
+        i_info = deploy_utils.parse_instance_info(node)
+        instance_info.update(i_info)
+    else:
+        instance_info['image_type'] = 'whole-disk-image'
     return instance_info
 
 
@@ -172,6 +203,42 @@ def check_image_size(task, image_source):
         raise exception.InvalidParameterValue(msg)
 
 
+def validate_image_proxies(node):
+    """Check that the provided proxy parameters are valid.
+
+    :param node: an Ironic node.
+    :raises: InvalidParameterValue if any of the provided proxy parameters are
+        incorrect.
+    """
+    invalid_proxies = {}
+    for scheme in ('http', 'https'):
+        proxy_param = 'image_%s_proxy' % scheme
+        proxy = node.driver_info.get(proxy_param)
+        if proxy:
+            chunks = urlparse.urlparse(proxy)
+            # NOTE(vdrok) If no scheme specified, this is still a valid
+            # proxy address. It is also possible for a proxy to have a
+            # scheme different from the one specified in the image URL,
+            # e.g. it is possible to use https:// proxy for downloading
+            # http:// image.
+            if chunks.scheme not in ('', 'http', 'https'):
+                invalid_proxies[proxy_param] = proxy
+    msg = ''
+    if invalid_proxies:
+        msg += _("Proxy URL should either have HTTP(S) scheme "
+                 "or no scheme at all, the following URLs are "
+                 "invalid: %s.") % invalid_proxies
+    no_proxy = node.driver_info.get('image_no_proxy')
+    if no_proxy is not None and not utils.is_valid_no_proxy(no_proxy):
+        msg += _(
+            "image_no_proxy should be a list of host names, IP addresses "
+            "or domain names to exclude from proxying, the specified list "
+            "%s is incorrect. To denote a domain name, prefix it with a dot "
+            "(instead of e.g. '.*').") % no_proxy
+    if msg:
+        raise exception.InvalidParameterValue(msg)
+
+
 class AgentDeploy(base.DeployInterface):
     """Interface for deploy-related actions."""
 
@@ -204,6 +271,7 @@ class AgentDeploy(base.DeployInterface):
         params['instance_info.image_source'] = image_source
         error_msg = _('Node %s failed to validate deploy image info. Some '
                       'parameters were missing') % node.uuid
+
         deploy_utils.check_for_missing_params(params, error_msg)
 
         if not service_utils.is_glance_image(image_source):
@@ -213,20 +281,13 @@ class AgentDeploy(base.DeployInterface):
                     "instance_info for node %s") % node.uuid)
 
         check_image_size(task, image_source)
-        is_whole_disk_image = node.driver_internal_info.get(
-            'is_whole_disk_image')
-        # TODO(sirushtim): Remove once IPA has support for partition images.
-        if is_whole_disk_image is False:
-            raise exception.InvalidParameterValue(_(
-                "Node %(node)s is configured to use the %(driver)s driver "
-                "which currently does not support deploying partition "
-                "images.") % {'node': node.uuid, 'driver': node.driver})
-
         # Validate the root device hints
         deploy_utils.parse_root_device_hints(node)
 
         # Validate node capabilities
         deploy_utils.validate_capabilities(node)
+
+        validate_image_proxies(node)
 
     @task_manager.require_exclusive_lock
     def deploy(self, task):
@@ -253,6 +314,7 @@ class AgentDeploy(base.DeployInterface):
         manager_utils.node_power_action(task, states.POWER_OFF)
         return states.DELETED
 
+    @task_manager.require_exclusive_lock
     def prepare(self, task):
         """Prepare the deployment environment for this node.
 
@@ -269,6 +331,7 @@ class AgentDeploy(base.DeployInterface):
                 deploy_opts = deploy_utils.build_agent_options(node)
                 task.driver.boot.prepare_ramdisk(task, deploy_opts)
 
+    @task_manager.require_exclusive_lock
     def clean_up(self, task):
         """Clean up the deployment environment for this node.
 
@@ -305,7 +368,9 @@ class AgentDeploy(base.DeployInterface):
         """Get the list of clean steps from the agent.
 
         :param task: a TaskManager object containing the node
-
+        :raises NodeCleaningFailure: if the clean steps are not yet
+            available (cached), for example, when a node has just been
+            enrolled and has not been cleaned yet.
         :returns: A list of clean step dictionaries
         """
         new_priorities = {
@@ -398,10 +463,59 @@ class AgentVendorInterface(agent_base_vendor.BaseAgentVendor):
             'stream_raw_images': CONF.agent.stream_raw_images,
         }
 
+        proxies = {}
+        for scheme in ('http', 'https'):
+            proxy_param = 'image_%s_proxy' % scheme
+            proxy = node.driver_info.get(proxy_param)
+            if proxy:
+                proxies[scheme] = proxy
+        if proxies:
+            image_info['proxies'] = proxies
+            no_proxy = node.driver_info.get('image_no_proxy')
+            if no_proxy is not None:
+                image_info['no_proxy'] = no_proxy
+
+        iwdi = node.driver_internal_info.get('is_whole_disk_image')
+        if not iwdi:
+            for label in PARTITION_IMAGE_LABELS:
+                image_info[label] = node.instance_info.get(label)
+            boot_option = deploy_utils.get_boot_option(node)
+            boot_mode = deploy_utils.get_boot_mode_for_deploy(node)
+            if boot_mode:
+                image_info['deploy_boot_mode'] = boot_mode
+            else:
+                image_info['deploy_boot_mode'] = 'bios'
+            image_info['boot_option'] = boot_option
+            disk_label = deploy_utils.get_disk_label(node)
+            if disk_label is not None:
+                image_info['disk_label'] = disk_label
+            image_info['node_uuid'] = node.uuid
+
         # Tell the client to download and write the image with the given args
         self._client.prepare_image(node, image_info)
 
         task.process_event('wait')
+
+    def _get_uuid_from_result(self, task, type_uuid):
+        command = self._client.get_commands_status(task.node)[-1]
+
+        if command['command_result'] is not None:
+            words = command['command_result']['result'].split()
+            for word in words:
+                if type_uuid in word:
+                    result = word.split('=')[1]
+                    if not result:
+                        msg = (_('Command result did not return %(type_uuid)s '
+                                 'for node %(node)s. The version of the IPA '
+                                 'ramdisk used in the deployment might not '
+                                 'have support for provisioning of '
+                                 'partition images.') %
+                               {'type_uuid': type_uuid,
+                                'node': task.node.uuid})
+                        LOG.error(msg)
+                        deploy_utils.set_failed_state(task, msg)
+                        return
+                    return result
 
     def check_deploy_success(self, node):
         # should only ever be called after we've validated that
@@ -413,6 +527,7 @@ class AgentVendorInterface(agent_base_vendor.BaseAgentVendor):
     def reboot_to_instance(self, task, **kwargs):
         task.process_event('resume')
         node = task.node
+        iwdi = task.node.driver_internal_info.get('is_whole_disk_image')
         error = self.check_deploy_success(node)
         if error is not None:
             # TODO(jimrollenhagen) power off if using neutron dhcp to
@@ -422,11 +537,22 @@ class AgentVendorInterface(agent_base_vendor.BaseAgentVendor):
             LOG.error(msg)
             deploy_utils.set_failed_state(task, msg)
             return
-
+        if not iwdi:
+            root_uuid = self._get_uuid_from_result(task, 'root_uuid')
+            if deploy_utils.get_boot_mode_for_deploy(node) == 'uefi':
+                efi_sys_uuid = (
+                    self._get_uuid_from_result(task,
+                                               'efi_system_partition_uuid'))
+            else:
+                efi_sys_uuid = None
+            task.node.driver_internal_info['root_uuid_or_disk_id'] = root_uuid
+            task.node.save()
+            self.prepare_instance_to_boot(task, root_uuid, efi_sys_uuid)
         LOG.info(_LI('Image successfully written to node %s'), node.uuid)
         LOG.debug('Rebooting node %s to instance', node.uuid)
+        if iwdi:
+            manager_utils.node_set_boot_device(task, 'disk', persistent=True)
 
-        manager_utils.node_set_boot_device(task, 'disk', persistent=True)
         self.reboot_and_finish_deploy(task)
 
         # NOTE(TheJulia): If we deployed a whole disk image, we
@@ -435,7 +561,7 @@ class AgentVendorInterface(agent_base_vendor.BaseAgentVendor):
         # TODO(rameshg87): Not all in-tree drivers using reboot_to_instance
         # have a boot interface. So include a check for now. Remove this
         # check once all in-tree drivers have a boot interface.
-        if task.driver.boot:
+        if task.driver.boot and iwdi:
             task.driver.boot.clean_up_ramdisk(task)
 
 

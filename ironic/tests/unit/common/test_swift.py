@@ -16,6 +16,7 @@ import mock
 from oslo_config import cfg
 import six
 from six.moves import builtins as __builtin__
+from six.moves import http_client
 from swiftclient import client as swift_client
 from swiftclient import exceptions as swift_exception
 from swiftclient import utils as swift_utils
@@ -46,17 +47,30 @@ class SwiftTestCase(base.TestCase):
         self.config(swift_max_retries=2, group='swift')
         self.config(insecure=0, group='keystone_authtoken')
         self.config(cafile='/path/to/ca/file', group='keystone_authtoken')
+        self.expected_params = {'retries': 2,
+                                'insecure': 0,
+                                'user': 'admin',
+                                'tenant_name': 'tenant',
+                                'key': 'password',
+                                'authurl': 'http://authurl/v2.0',
+                                'cacert': '/path/to/ca/file',
+                                'auth_version': '2'}
 
     def test___init__(self, connection_mock):
         swift.SwiftAPI()
-        params = {'retries': 2,
-                  'insecure': 0,
-                  'user': 'admin',
-                  'tenant_name': 'tenant',
-                  'key': 'password',
-                  'authurl': 'http://authurl/v2.0',
-                  'cacert': '/path/to/ca/file',
-                  'auth_version': '2'}
+        connection_mock.assert_called_once_with(**self.expected_params)
+
+    def test__init__with_region_from_config(self, connection_mock):
+        self.config(region_name='region1', group='keystone_authtoken')
+        swift.SwiftAPI()
+        params = self.expected_params.copy()
+        params['os_options'] = {'region_name': 'region1'}
+        connection_mock.assert_called_once_with(**params)
+
+    def test__init__with_region_from_constructor(self, connection_mock):
+        swift.SwiftAPI(region_name='region1')
+        params = self.expected_params.copy()
+        params['os_options'] = {'region_name': 'region1'}
         connection_mock.assert_called_once_with(**params)
 
     @mock.patch.object(__builtin__, 'open', autospec=True)
@@ -131,8 +145,8 @@ class SwiftTestCase(base.TestCase):
 
     def test_delete_object_exc_resource_not_found(self, connection_mock):
         swiftapi = swift.SwiftAPI()
-        exc = swift_exception.ClientException("Resource not found",
-                                              http_status=404)
+        exc = swift_exception.ClientException(
+            "Resource not found", http_status=http_client.NOT_FOUND)
         connection_obj_mock = connection_mock.return_value
         connection_obj_mock.delete_object.side_effect = exc
         self.assertRaises(exception.SwiftObjectNotFoundError,
