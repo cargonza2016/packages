@@ -16,6 +16,7 @@
 import ast
 import datetime
 
+import jsonschema
 from oslo_config import cfg
 from oslo_log import log
 from oslo_utils import strutils
@@ -37,6 +38,7 @@ from ironic.api import expose
 from ironic.common import exception
 from ironic.common.i18n import _
 from ironic.common import states as ir_states
+from ironic.conductor import utils as conductor_utils
 from ironic import objects
 
 
@@ -45,6 +47,36 @@ CONF.import_opt('heartbeat_timeout', 'ironic.conductor.manager',
                 group='conductor')
 
 LOG = log.getLogger(__name__)
+_CLEAN_STEPS_SCHEMA = {
+    "$schema": "http://json-schema.org/schema#",
+    "title": "Clean steps schema",
+    "type": "array",
+    # list of clean steps
+    "items": {
+        "type": "object",
+        # args is optional
+        "required": ["interface", "step"],
+        "properties": {
+            "interface": {
+                "description": "driver interface",
+                "enum": list(conductor_utils.CLEANING_INTERFACE_PRIORITY)
+                # interface value must be one of the valid interfaces
+            },
+            "step": {
+                "description": "name of clean step",
+                "type": "string",
+                "minLength": 1
+            },
+            "args": {
+                "description": "additional args",
+                "type": "object",
+                "properties": {}
+            },
+        },
+        # interface, step and args are the only expected keys
+        "additionalProperties": False
+    }
+}
 
 # Vendor information for node's driver:
 #   key = driver name;
@@ -58,17 +90,6 @@ _VENDOR_METHODS = {}
 
 _DEFAULT_RETURN_FIELDS = ('instance_uuid', 'maintenance', 'power_state',
                           'provision_state', 'uuid', 'name')
-
-# Minimum API version to use for certain verbs
-MIN_VERB_VERSIONS = {
-    # v1.4 added the MANAGEABLE state and two verbs to move nodes into
-    # and out of that state. Reject requests to do this in older versions
-    ir_states.VERBS['manage']: versions.MINOR_4_MANAGEABLE_STATE,
-    ir_states.VERBS['provide']: versions.MINOR_4_MANAGEABLE_STATE,
-
-    ir_states.VERBS['inspect']: versions.MINOR_6_INSPECT_STATE,
-    ir_states.VERBS['abort']: versions.MINOR_13_ABORT_VERB,
-}
 
 # States where calling do_provisioning_action makes sense
 PROVISION_ACTION_STATES = (ir_states.VERBS['manage'],
@@ -102,12 +123,6 @@ def assert_juno_provision_state_name(obj):
     if (pecan.request.version.minor < versions.MINOR_2_AVAILABLE_STATE and
             obj.provision_state == ir_states.AVAILABLE):
         obj.provision_state = ir_states.NOSTATE
-
-
-def check_allow_management_verbs(verb):
-    min_version = MIN_VERB_VERSIONS.get(verb)
-    if min_version is not None and pecan.request.version.minor < min_version:
-        raise exception.NotAcceptable()
 
 
 class BootDeviceController(rest.RestController):
@@ -399,8 +414,10 @@ class NodeStatesController(rest.RestController):
         pecan.response.location = link.build_url('nodes', url_args)
 
     @expose.expose(None, types.uuid_or_name, wtypes.text,
-                   wtypes.text, status_code=http_client.ACCEPTED)
-    def provision(self, node_ident, target, configdrive=None):
+                   wtypes.text, types.jsontype,
+                   status_code=http_client.ACCEPTED)
+    def provision(self, node_ident, target, configdrive=None,
+                  clean_steps=None):
         """Asynchronous trigger the provisioning of the node.
 
         This will set the target provision state of the node, and a
@@ -415,15 +432,38 @@ class NodeStatesController(rest.RestController):
         :param configdrive: Optional. A gzipped and base64 encoded
             configdrive. Only valid when setting provision state
             to "active".
+        :param clean_steps: An ordered list of cleaning steps that will be
+            performed on the node. A cleaning step is a dictionary with
+            required keys 'interface' and 'step', and optional key 'args'. If
+            specified, the value for 'args' is a keyword variable argument
+            dictionary that is passed to the cleaning step method.::
+
+              { 'interface': <driver_interface>,
+                'step': <name_of_clean_step>,
+                'args': {<arg1>: <value1>, ..., <argn>: <valuen>} }
+
+            For example (this isn't a real example, this cleaning step
+            doesn't exist)::
+
+              { 'interface': 'deploy',
+                'step': 'upgrade_firmware',
+                'args': {'force': True} }
+
+            This is required (and only valid) when target is "clean".
         :raises: NodeLocked (HTTP 409) if the node is currently locked.
         :raises: ClientSideError (HTTP 409) if the node is already being
                  provisioned.
+        :raises: InvalidParameterValue (HTTP 400), if validation of
+                 clean_steps or power driver interface fails.
         :raises: InvalidStateRequested (HTTP 400) if the requested transition
                  is not possible from the current state.
+        :raises: NodeInMaintenance (HTTP 400), if operation cannot be
+                 performed because the node is in maintenance mode.
+        :raises: NoFreeConductorWorker (HTTP 503) if no workers are available.
         :raises: NotAcceptable (HTTP 406) if the API version specified does
                  not allow the requested state transition.
         """
-        check_allow_management_verbs(target)
+        api_utils.check_allow_management_verbs(target)
         rpc_node = api_utils.get_rpc_node(node_ident)
         topic = pecan.request.rpcapi.get_topic_for(rpc_node)
 
@@ -456,6 +496,12 @@ class NodeStatesController(rest.RestController):
             raise wsme.exc.ClientSideError(
                 msg, status_code=http_client.BAD_REQUEST)
 
+        if clean_steps and target != ir_states.VERBS['clean']:
+            msg = (_('"clean_steps" is only valid when setting target '
+                     'provision state to %s') % ir_states.VERBS['clean'])
+            raise wsme.exc.ClientSideError(
+                msg, status_code=http_client.BAD_REQUEST)
+
         # Note that there is a race condition. The node state(s) could change
         # by the time the RPC call is made and the TaskManager manager gets a
         # lock.
@@ -473,6 +519,15 @@ class NodeStatesController(rest.RestController):
         elif target == ir_states.VERBS['inspect']:
             pecan.request.rpcapi.inspect_hardware(
                 pecan.request.context, rpc_node.uuid, topic=topic)
+        elif target == ir_states.VERBS['clean']:
+            if not clean_steps:
+                msg = (_('"clean_steps" is required when setting target '
+                         'provision state to %s') % ir_states.VERBS['clean'])
+                raise wsme.exc.ClientSideError(
+                    msg, status_code=http_client.BAD_REQUEST)
+            _check_clean_steps(clean_steps)
+            pecan.request.rpcapi.do_node_clean(
+                pecan.request.context, rpc_node.uuid, clean_steps, topic)
         elif target in PROVISION_ACTION_STATES:
             pecan.request.rpcapi.do_provisioning_action(
                 pecan.request.context, rpc_node.uuid, target, topic)
@@ -484,6 +539,23 @@ class NodeStatesController(rest.RestController):
         # Set the HTTP Location Header
         url_args = '/'.join([node_ident, 'states'])
         pecan.response.location = link.build_url('nodes', url_args)
+
+
+def _check_clean_steps(clean_steps):
+    """Ensure all necessary keys are present and correct in clean steps.
+
+    Check that the user-specified clean steps are in the expected format and
+    include the required information.
+
+    :param clean_steps: a list of clean steps. For more details, see the
+        clean_steps parameter of :func:`NodeStatesController.provision`.
+    :raises: InvalidParameterValue if validation of clean steps fails.
+    """
+    try:
+        jsonschema.validate(clean_steps, _CLEAN_STEPS_SCHEMA)
+    except jsonschema.ValidationError as exc:
+        raise exception.InvalidParameterValue(_('Invalid clean_steps: %s') %
+                                              exc)
 
 
 class Node(base.APIBase):
@@ -882,8 +954,8 @@ class NodesController(rest.RestController):
 
     def _get_nodes_collection(self, chassis_uuid, instance_uuid, associated,
                               maintenance, provision_state, marker, limit,
-                              sort_key, sort_dir, resource_url=None,
-                              fields=None):
+                              sort_key, sort_dir, driver=None,
+                              resource_url=None, fields=None):
         if self.from_chassis and not chassis_uuid:
             raise exception.MissingParameterValue(
                 _("Chassis id not specified."))
@@ -913,6 +985,8 @@ class NodesController(rest.RestController):
                 filters['maintenance'] = maintenance
             if provision_state:
                 filters['provision_state'] = provision_state
+            if driver:
+                filters['driver'] = driver
 
             nodes = objects.Node.list(pecan.request.context, limit, marker_obj,
                                       sort_key=sort_key, sort_dir=sort_dir,
@@ -950,12 +1024,11 @@ class NodesController(rest.RestController):
         :raises: exception.NotAcceptable
         :raises: wsme.exc.ClientSideError
         """
-        if name:
-            if not api_utils.allow_node_logical_names():
-                raise exception.NotAcceptable()
-            if not api_utils.is_valid_node_name(name):
-                raise wsme.exc.ClientSideError(
-                    error_msg, status_code=http_client.BAD_REQUEST)
+        if not api_utils.allow_node_logical_names():
+            raise exception.NotAcceptable()
+        if not api_utils.is_valid_node_name(name):
+            raise wsme.exc.ClientSideError(
+                error_msg, status_code=http_client.BAD_REQUEST)
 
     def _update_changed_fields(self, node, rpc_node):
         """Update rpc_node based on changed fields in a node.
@@ -991,14 +1064,15 @@ class NodesController(rest.RestController):
 
     @expose.expose(NodeCollection, types.uuid, types.uuid, types.boolean,
                    types.boolean, wtypes.text, types.uuid, int, wtypes.text,
-                   wtypes.text, types.listtype)
+                   wtypes.text, wtypes.text, types.listtype)
     def get_all(self, chassis_uuid=None, instance_uuid=None, associated=None,
                 maintenance=None, provision_state=None, marker=None,
-                limit=None, sort_key='id', sort_dir='asc', fields=None):
+                limit=None, sort_key='id', sort_dir='asc', driver=None,
+                fields=None):
         """Retrieve a list of nodes.
 
         :param chassis_uuid: Optional UUID of a chassis, to get only nodes for
-                           that chassis.
+                             that chassis.
         :param instance_uuid: Optional UUID of an instance, to find the node
                               associated with that instance.
         :param associated: Optional boolean whether to return a list of
@@ -1013,25 +1087,28 @@ class NodesController(rest.RestController):
         :param limit: maximum number of resources to return in a single result.
         :param sort_key: column to sort results by. Default: id.
         :param sort_dir: direction to sort. "asc" or "desc". Default: asc.
+        :param driver: Optional string value to get only nodes using that
+                       driver.
         :param fields: Optional, a list with a specified set of fields
-            of the resource to be returned.
+                       of the resource to be returned.
         """
         api_utils.check_allow_specify_fields(fields)
         api_utils.check_for_invalid_state_and_allow_filter(provision_state)
+        api_utils.check_allow_specify_driver(driver)
         if fields is None:
             fields = _DEFAULT_RETURN_FIELDS
         return self._get_nodes_collection(chassis_uuid, instance_uuid,
                                           associated, maintenance,
                                           provision_state, marker,
                                           limit, sort_key, sort_dir,
-                                          fields=fields)
+                                          driver, fields=fields)
 
     @expose.expose(NodeCollection, types.uuid, types.uuid, types.boolean,
                    types.boolean, wtypes.text, types.uuid, int, wtypes.text,
-                   wtypes.text)
+                   wtypes.text, wtypes.text)
     def detail(self, chassis_uuid=None, instance_uuid=None, associated=None,
                maintenance=None, provision_state=None, marker=None,
-               limit=None, sort_key='id', sort_dir='asc'):
+               limit=None, sort_key='id', sort_dir='asc', driver=None):
         """Retrieve a list of nodes with detail.
 
         :param chassis_uuid: Optional UUID of a chassis, to get only nodes for
@@ -1050,8 +1127,11 @@ class NodesController(rest.RestController):
         :param limit: maximum number of resources to return in a single result.
         :param sort_key: column to sort results by. Default: id.
         :param sort_dir: direction to sort. "asc" or "desc". Default: asc.
+        :param driver: Optional string value to get only nodes using that
+                       driver.
         """
         api_utils.check_for_invalid_state_and_allow_filter(provision_state)
+        api_utils.check_allow_specify_driver(driver)
         # /detail should only work against collections
         parent = pecan.request.path.split('/')[:-1][-1]
         if parent != "nodes":
@@ -1062,7 +1142,7 @@ class NodesController(rest.RestController):
                                           associated, maintenance,
                                           provision_state, marker,
                                           limit, sort_key, sort_dir,
-                                          resource_url)
+                                          driver, resource_url)
 
     @expose.expose(wtypes.text, types.uuid_or_name, types.uuid)
     def validate(self, node=None, node_uuid=None):
@@ -1128,9 +1208,10 @@ class NodesController(rest.RestController):
             e.code = http_client.BAD_REQUEST
             raise e
 
-        error_msg = _("Cannot create node with invalid name "
-                      "%(name)s") % {'name': node.name}
-        self._check_name_acceptable(node.name, error_msg)
+        if node.name:
+            error_msg = _("Cannot create node with invalid name "
+                          "%(name)s") % {'name': node.name}
+            self._check_name_acceptable(node.name, error_msg)
         node.provision_state = api_utils.initial_node_provision_state()
 
         new_node = objects.Node(pecan.request.context,
@@ -1178,9 +1259,11 @@ class NodesController(rest.RestController):
                 msg % node_ident, status_code=http_client.CONFLICT)
 
         name = api_utils.get_patch_value(patch, '/name')
-        error_msg = _("Node %(node)s: Cannot change name to invalid "
-                      "name '%(name)s'") % {'node': node_ident, 'name': name}
-        self._check_name_acceptable(name, error_msg)
+        if name:
+            error_msg = _("Node %(node)s: Cannot change name to invalid "
+                          "name '%(name)s'") % {'node': node_ident,
+                                                'name': name}
+            self._check_name_acceptable(name, error_msg)
         try:
             node_dict = rpc_node.as_dict()
             # NOTE(lucasagomes):

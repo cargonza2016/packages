@@ -54,9 +54,10 @@ The following requirements apply for both ``iscsi_pxe_oneview`` and
   the communication between Ironic and OneView.
 
   Install the ``python-oneviewclient`` module to enable the communication.
-  Minimum version required is 2.0.1.::
+  Minimum version required is 2.0.2 but it is recommended to install the most
+  up-to-date version.::
 
-  $ pip install "python-oneviewclient>=2.0.1"
+  $ pip install "python-oneviewclient<3.0.0,>=2.0.2"
 
 Tested platforms
 ================
@@ -65,11 +66,16 @@ Tested platforms
 
 * The Enclosure used for testing was the ``BladeSystem c7000 Enclosure G2``.
 
-* The drivers should work on HP Proliant Gen8 Servers supported by
-  OneView 2.0 and above. It has been tested with the following servers:
+* The drivers should work on HP Proliant Gen8 and Gen9 Servers supported by
+  OneView 2.0 and above, or any hardware whose network can be managed by
+  OneView's ServerProfile. It has been tested with the following servers:
 
   - Proliant BL460c Gen8
   - Proliant BL465c Gen8
+  - Proliant DL360 Gen9 (starting with python-oneviewclient 2.1.0)
+
+  Notice here that to the driver work correctly with Gen8 and Gen9 DL servers
+  in general, the hardware also needs to run version 4.2.3 of iLO, with Redfish.
 
 Drivers
 =======
@@ -126,7 +132,7 @@ Overview
 ``agent_pxe_oneview`` driver uses PXEBoot for boot and AgentDeploy for deploy.
 
 Configuring and enabling the driver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Add ``agent_pxe_oneview`` to the list of ``enabled_drivers`` in
    ``/etc/ironic/ironic.conf``. For example::

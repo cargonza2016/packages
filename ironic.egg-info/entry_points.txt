@@ -63,3 +63,6 @@ pxe_ucs = ironic.drivers.pxe:PXEAndUcsDriver
 pxe_vbox = ironic.drivers.pxe:PXEAndVirtualBoxDriver
 pxe_wol = ironic.drivers.pxe:PXEAndWakeOnLanDriver
 
+[tempest.test_plugins]
+ironic_tests = ironic_tempest_plugin.plugin:IronicTempestPlugin
+

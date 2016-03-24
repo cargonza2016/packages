@@ -89,6 +89,15 @@ class ContextHook(hooks.PecanHook):
             show_password=show_password,
             **creds)
 
+    def after(self, state):
+        if state.request.context == {}:
+            # An incorrect url path will not create RequestContext
+            return
+        # NOTE(lintan): RequestContext will generate a request_id if no one
+        # passing outside, so it always contain a request_id.
+        request_id = state.request.context.request_id
+        state.response.headers['Openstack-Request-Id'] = request_id
+
 
 class RPCHook(hooks.PecanHook):
     """Attach the rpcapi object to the request so controllers can get to it."""
@@ -138,9 +147,8 @@ class NoExceptionTracebackHook(hooks.PecanHook):
             return
 
         json_body = state.response.json
-        # Do not remove traceback when server in debug mode (except 'Server'
-        # errors when 'debuginfo' will be used for traces).
-        if cfg.CONF.debug and json_body.get('faultcode') != 'Server':
+        # Do not remove traceback when traceback config is set
+        if cfg.CONF.debug_tracebacks_in_api:
             return
 
         faultstring = json_body.get('faultstring')

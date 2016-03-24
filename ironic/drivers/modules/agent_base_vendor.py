@@ -16,12 +16,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import collections
 import time
 
 from oslo_config import cfg
 from oslo_log import log
 from oslo_utils import excutils
+from oslo_utils import strutils
+from oslo_utils import timeutils
 import retrying
 
 from ironic.common import boot_devices
@@ -33,6 +35,7 @@ from ironic.common.i18n import _LW
 from ironic.common import states
 from ironic.common import utils
 from ironic.conductor import rpcapi
+from ironic.conductor import task_manager
 from ironic.conductor import utils as manager_utils
 from ironic.drivers import base
 from ironic.drivers.modules import agent_client
@@ -79,6 +82,13 @@ LOG = log.getLogger(__name__)
 # raid interface. '<post-delete function>' is to be called after
 # completing 'delete_configuration' of raid interface.
 POST_CLEAN_STEP_HOOKS = {}
+
+VENDOR_PROPERTIES = {
+    'deploy_forces_oob_reboot': _(
+        'Whether Ironic should force a reboot of the Node via the out-of-band '
+        'channel after deployment is complete. Provides compatiblity with '
+        'older deploy ramdisks. Defaults to False. Optional.')
+}
 
 
 def _get_client():
@@ -176,9 +186,7 @@ class BaseAgentVendor(base.VendorInterface):
 
         :returns: dictionary of <property name>:<property description> entries.
         """
-        # NOTE(jroll) all properties are set by the driver,
-        #             not by the operator.
-        return {}
+        return VENDOR_PROPERTIES
 
     def validate(self, task, method, **kwargs):
         """Validate the driver-specific Node deployment info.
@@ -215,17 +223,77 @@ class BaseAgentVendor(base.VendorInterface):
         task.release_resources()
         rpc.continue_node_clean(task.context, uuid, topic=topic)
 
+    def _refresh_clean_steps(self, task):
+        """Refresh the node's cached clean steps from the booted agent.
+
+        Gets the node's clean steps from the booted agent and caches them.
+        The steps are cached to make get_clean_steps() calls synchronous, and
+        should be refreshed as soon as the agent boots to start cleaning or
+        if cleaning is restarted because of a cleaning version mismatch.
+
+        :param task: a TaskManager instance
+        :raises: NodeCleaningFailure if the agent returns invalid results
+        """
+        node = task.node
+        previous_steps = node.driver_internal_info.get(
+            'agent_cached_clean_steps')
+        LOG.debug('Refreshing agent clean step cache for node %(node)s. '
+                  'Previously cached steps: %(steps)s',
+                  {'node': node.uuid, 'steps': previous_steps})
+
+        agent_result = self._client.get_clean_steps(node, task.ports).get(
+            'command_result', {})
+        missing = set(['clean_steps', 'hardware_manager_version']).difference(
+            agent_result)
+        if missing:
+            raise exception.NodeCleaningFailure(_(
+                'agent get_clean_steps for node %(node)s returned an invalid '
+                'result. Keys: %(keys)s are missing from result: %(result)s.')
+                % ({'node': node.uuid, 'keys': missing,
+                    'result': agent_result}))
+
+        # agent_result['clean_steps'] looks like
+        # {'HardwareManager': [{step1},{steps2}...], ...}
+        steps = collections.defaultdict(list)
+        for step_list in agent_result['clean_steps'].values():
+            for step in step_list:
+                missing = set(['interface', 'step', 'priority']).difference(
+                    step)
+                if missing:
+                    raise exception.NodeCleaningFailure(_(
+                        'agent get_clean_steps for node %(node)s returned an '
+                        'invalid clean step. Keys: %(keys)s are missing from '
+                        'step: %(step)s.') % ({'node': node.uuid,
+                                               'keys': missing, 'step': step}))
+
+                steps[step['interface']].append(step)
+
+        # Save hardware manager version, steps, and date
+        info = node.driver_internal_info
+        info['hardware_manager_version'] = agent_result[
+            'hardware_manager_version']
+        info['agent_cached_clean_steps'] = dict(steps)
+        info['agent_cached_clean_steps_refreshed'] = str(timeutils.utcnow())
+        node.driver_internal_info = info
+        node.save()
+        LOG.debug('Refreshed agent clean step cache for node %(node)s: '
+                  '%(steps)s', {'node': node.uuid, 'steps': steps})
+
     def continue_cleaning(self, task, **kwargs):
         """Start the next cleaning step if the previous one is complete.
 
-        In order to avoid errors and make agent upgrades painless, cleaning
-        will check the version of all hardware managers during get_clean_steps
-        at the beginning of cleaning and before executing each step in the
-        agent. If the version has changed between steps, the agent is unable
-        to tell if an ordering change will cause a cleaning issue. Therefore,
-        we restart cleaning.
+        In order to avoid errors and make agent upgrades painless, the agent
+        compares the version of all hardware managers at the start of the
+        cleaning (the agent's get_clean_steps() call) and before executing
+        each clean step. If the version has changed between steps, the agent is
+        unable to tell if an ordering change will cause a cleaning issue so
+        it returns CLEAN_VERSION_MISMATCH. For automated cleaning, we restart
+        the entire cleaning cycle. For manual cleaning, we don't.
         """
         node = task.node
+        # For manual clean, the target provision state is MANAGEABLE, whereas
+        # for automated cleaning, it is (the default) AVAILABLE.
+        manual_clean = node.target_provision_state == states.MANAGEABLE
         command = self._get_completed_cleaning_command(task)
         LOG.debug('Cleaning command status for node %(node)s on step %(step)s:'
                   ' %(command)s', {'node': node.uuid,
@@ -245,20 +313,47 @@ class BaseAgentVendor(base.VendorInterface):
             LOG.error(msg)
             return manager_utils.cleaning_error_handler(task, msg)
         elif command.get('command_status') == 'CLEAN_VERSION_MISMATCH':
-            # Restart cleaning, agent must have rebooted to new version
-            LOG.info(_LI('Node %s detected a clean version mismatch, '
-                         'resetting clean steps and rebooting the node.'),
-                     node.uuid)
+            # Cache the new clean steps (and 'hardware_manager_version')
             try:
-                manager_utils.set_node_cleaning_steps(task)
-            except exception.NodeCleaningFailure:
-                msg = (_('Could not restart cleaning on node %(node)s: '
-                         '%(err)s.') %
-                       {'node': node.uuid,
-                        'err': command.get('command_error'),
-                        'step': node.clean_step})
+                self._refresh_clean_steps(task)
+            except exception.NodeCleaningFailure as e:
+                msg = (_('Could not continue cleaning on node '
+                         '%(node)s: %(err)s.') %
+                       {'node': node.uuid, 'err': e})
                 LOG.exception(msg)
                 return manager_utils.cleaning_error_handler(task, msg)
+
+            if manual_clean:
+                # Don't restart manual cleaning if agent reboots to a new
+                # version. Both are operator actions, unlike automated
+                # cleaning. Manual clean steps are not necessarily idempotent
+                # like automated clean steps and can be even longer running.
+                LOG.info(_LI('During manual cleaning, node %(node)s detected '
+                             'a clean version mismatch. Re-executing and '
+                             'continuing from current step %(step)s.'),
+                         {'node': node.uuid, 'step': node.clean_step})
+
+                driver_internal_info = node.driver_internal_info
+                driver_internal_info['skip_current_clean_step'] = False
+                node.driver_internal_info = driver_internal_info
+                node.save()
+            else:
+                # Restart cleaning, agent must have rebooted to new version
+                LOG.info(_LI('During automated cleaning, node %s detected a '
+                             'clean version mismatch. Resetting clean steps '
+                             'and rebooting the node.'),
+                         node.uuid)
+                try:
+                    manager_utils.set_node_cleaning_steps(task)
+                except exception.NodeCleaningFailure:
+                    msg = (_('Could not restart automated cleaning on node '
+                             '%(node)s: %(err)s.') %
+                           {'node': node.uuid,
+                            'err': command.get('command_error'),
+                            'step': node.clean_step})
+                    LOG.exception(msg)
+                    return manager_utils.cleaning_error_handler(task, msg)
+
             self.notify_conductor_resume_clean(task)
 
         elif command.get('command_status') == 'SUCCEEDED':
@@ -295,6 +390,7 @@ class BaseAgentVendor(base.VendorInterface):
             return manager_utils.cleaning_error_handler(task, msg)
 
     @base.passthru(['POST'])
+    @task_manager.require_exclusive_lock
     def heartbeat(self, task, **kwargs):
         """Method for agent to periodically check in.
 
@@ -350,20 +446,29 @@ class BaseAgentVendor(base.VendorInterface):
             # release starts.
             elif node.provision_state in (states.CLEANWAIT, states.CLEANING):
                 node.touch_provisioning()
-                if not node.clean_step:
-                    LOG.debug('Node %s just booted to start cleaning.',
-                              node.uuid)
-                    msg = _('Node failed to start the next cleaning step.')
-                    manager_utils.set_node_cleaning_steps(task)
-                    self.notify_conductor_resume_clean(task)
-                else:
-                    msg = _('Node failed to check cleaning progress.')
-                    self.continue_cleaning(task, **kwargs)
+                try:
+                    if not node.clean_step:
+                        LOG.debug('Node %s just booted to start cleaning.',
+                                  node.uuid)
+                        msg = _('Node failed to start the first cleaning '
+                                'step.')
+                        # First, cache the clean steps
+                        self._refresh_clean_steps(task)
+                        # Then set/verify node clean steps and start cleaning
+                        manager_utils.set_node_cleaning_steps(task)
+                        self.notify_conductor_resume_clean(task)
+                    else:
+                        msg = _('Node failed to check cleaning progress.')
+                        self.continue_cleaning(task, **kwargs)
+                except exception.NoFreeConductorWorker:
+                    # waiting for the next heartbeat, node.last_error and
+                    # logging message is filled already via conductor's hook
+                    pass
 
         except Exception as e:
             err_info = {'node': node.uuid, 'msg': msg, 'e': e}
             last_error = _('Asynchronous exception for node %(node)s: '
-                           '%(msg)s exception: %(e)s') % err_info
+                           '%(msg)s Exception: %(e)s') % err_info
             LOG.exception(last_error)
             if node.provision_state in (states.CLEANING, states.CLEANWAIT):
                 manager_utils.cleaning_error_handler(task, last_error)
@@ -589,18 +694,38 @@ class BaseAgentVendor(base.VendorInterface):
             return task.driver.power.get_power_state(task)
 
         node = task.node
+        # Whether ironic should power off the node via out-of-band or
+        # in-band methods
+        oob_power_off = strutils.bool_from_string(
+            node.driver_info.get('deploy_forces_oob_reboot', False))
 
         try:
-            try:
-                self._client.power_off(node)
-                _wait_until_powered_off(task)
-            except Exception as e:
-                LOG.warning(
-                    _LW('Failed to soft power off node %(node_uuid)s '
-                        'in at least %(timeout)d seconds. Error: %(error)s'),
-                    {'node_uuid': node.uuid,
-                     'timeout': (wait * (attempts - 1)) / 1000,
-                     'error': e})
+            if not oob_power_off:
+                try:
+                    self._client.power_off(node)
+                    _wait_until_powered_off(task)
+                except Exception as e:
+                    LOG.warning(
+                        _LW('Failed to soft power off node %(node_uuid)s '
+                            'in at least %(timeout)d seconds. '
+                            'Error: %(error)s'),
+                        {'node_uuid': node.uuid,
+                         'timeout': (wait * (attempts - 1)) / 1000,
+                         'error': e})
+            else:
+                # Flush the file system prior to hard rebooting the node
+                result = self._client.sync(node)
+                error = result.get('faultstring')
+                if error:
+                    if 'Unknown command' in error:
+                        error = _('The version of the IPA ramdisk used in '
+                                  'the deployment do not support the '
+                                  'command "sync"')
+                    LOG.warning(_LW(
+                        'Failed to flush the file system prior to hard '
+                        'rebooting the node %(node)s. Error: %(error)s'),
+                        {'node': node.uuid, 'error': error})
+
             manager_utils.node_power_action(task, states.REBOOT)
         except Exception as e:
             msg = (_('Error rebooting node %(node)s after deploy. '
@@ -610,6 +735,30 @@ class BaseAgentVendor(base.VendorInterface):
 
         task.process_event('done')
         LOG.info(_LI('Deployment to node %s done'), task.node.uuid)
+
+    def prepare_instance_to_boot(self, task, root_uuid, efi_sys_uuid):
+        """Prepares instance to boot.
+
+        :param task: a TaskManager object containing the node
+        :param root_uuid: the UUID for root partition
+        :param efi_sys_uuid: the UUID for the efi partition
+        :raises: InvalidState if fails to prepare instance
+        """
+
+        node = task.node
+        if deploy_utils.get_boot_option(node) == "local":
+            # Install the boot loader
+            self.configure_local_boot(
+                task, root_uuid=root_uuid,
+                efi_system_part_uuid=efi_sys_uuid)
+        try:
+            task.driver.boot.prepare_instance(task)
+        except Exception as e:
+            LOG.error(_LE('Deploy failed for instance %(instance)s. '
+                          'Error: %(error)s'),
+                      {'instance': node.instance_uuid, 'error': e})
+            msg = _('Failed to continue agent deployment.')
+            self._log_and_raise_deployment_error(task, msg)
 
     def configure_local_boot(self, task, root_uuid=None,
                              efi_system_part_uuid=None):

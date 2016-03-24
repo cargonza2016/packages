@@ -1,1 +1,2 @@
 ironic
+ironic_tempest_plugin
