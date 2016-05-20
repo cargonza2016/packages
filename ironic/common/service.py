@@ -19,7 +19,6 @@ import socket
 
 from oslo_concurrency import processutils
 from oslo_config import cfg
-from oslo_context import context
 from oslo_log import log
 import oslo_messaging as messaging
 from oslo_service import service
@@ -28,6 +27,7 @@ from oslo_utils import importutils
 
 from ironic.api import app
 from ironic.common import config
+from ironic.common import context
 from ironic.common import exception
 from ironic.common.i18n import _
 from ironic.common.i18n import _LE
@@ -72,7 +72,7 @@ class RPCService(service.Service):
 
     def start(self):
         super(RPCService, self).start()
-        admin_context = context.RequestContext('admin', 'admin', is_admin=True)
+        admin_context = context.get_admin_context()
 
         target = messaging.Target(topic=self.topic, server=self.host)
         endpoints = [self.manager]
@@ -129,13 +129,15 @@ def prepare_service(argv=[]):
                                          'sqlalchemy=WARNING',
                                          'keystoneclient=INFO',
                                          'stevedore=INFO',
-                                         'eventlet.wsgi.server=WARNING',
+                                         'eventlet.wsgi.server=INFO',
                                          'iso8601=WARNING',
                                          'paramiko=WARNING',
                                          'requests=WARNING',
                                          'neutronclient=WARNING',
                                          'glanceclient=WARNING',
                                          'urllib3.connectionpool=WARNING',
+                                         'keystonemiddleware.auth_token=INFO',
+                                         'keystoneauth.session=INFO',
                                          ])
     config.parse_args(argv)
     log.setup(CONF, 'ironic')
@@ -168,8 +170,7 @@ class WSGIService(service.ServiceBase):
         self.server = wsgi.Server(CONF, name, self.app,
                                   host=CONF.api.host_ip,
                                   port=CONF.api.port,
-                                  use_ssl=use_ssl,
-                                  logger_name=name)
+                                  use_ssl=use_ssl)
 
     def start(self):
         """Start serving this service using loaded configuration.

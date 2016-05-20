@@ -1256,17 +1256,48 @@ class TestPatch(test_api_base.BaseApiTest):
         self.assertEqual('application/json', response.content_type)
         self.assertEqual(http_client.OK, response.status_code)
 
-    def test_patch_add_name_invalid(self):
+    def _patch_add_name_invalid_or_reserved(self, name):
         self.mock_update_node.return_value = self.node_no_name
-        test_name = 'i am invalid'
         response = self.patch_json('/nodes/%s' % self.node_no_name.uuid,
                                    [{'path': '/name',
                                      'op': 'add',
-                                     'value': test_name}],
+                                     'value': name}],
                                    headers={api_base.Version.string: "1.10"},
                                    expect_errors=True)
         self.assertEqual('application/json', response.content_type)
         self.assertEqual(http_client.BAD_REQUEST, response.status_code)
+        self.assertTrue(response.json['error_message'])
+
+    def test_patch_add_name_invalid(self):
+        self._patch_add_name_invalid_or_reserved('i am invalid')
+
+    def test_patch_add_name_reserved(self):
+        reserved_names = api_utils.get_controller_reserved_names(
+            api_node.NodesController)
+        for name in reserved_names:
+            self._patch_add_name_invalid_or_reserved(name)
+
+    def test_patch_add_name_empty_invalid(self):
+        test_name = ''
+        response = self.patch_json('/nodes/%s' % self.node_no_name.uuid,
+                                   [{'path': '/name',
+                                     'op': 'add',
+                                     'value': test_name}],
+                                   headers={api_base.Version.string: "1.5"},
+                                   expect_errors=True)
+        self.assertEqual('application/json', response.content_type)
+        self.assertEqual(http_client.BAD_REQUEST, response.status_code)
+        self.assertTrue(response.json['error_message'])
+
+    def test_patch_add_name_empty_not_acceptable(self):
+        test_name = ''
+        response = self.patch_json('/nodes/%s' % self.node_no_name.uuid,
+                                   [{'path': '/name',
+                                     'op': 'add',
+                                     'value': test_name}],
+                                   expect_errors=True)
+        self.assertEqual('application/json', response.content_type)
+        self.assertEqual(http_client.NOT_ACCEPTABLE, response.status_code)
         self.assertTrue(response.json['error_message'])
 
     def test_patch_name_replace_ok(self):
@@ -1293,6 +1324,37 @@ class TestPatch(test_api_base.BaseApiTest):
         self.assertEqual(http_client.BAD_REQUEST, response.status_code)
         self.assertTrue(response.json['error_message'])
 
+    def test_patch_update_name_twice_both_invalid(self):
+        test_name_1 = 'Windows ME'
+        test_name_2 = 'Guido Van Error'
+        response = self.patch_json('/nodes/%s' % self.node.uuid,
+                                   [{'path': '/name',
+                                     'op': 'add',
+                                     'value': test_name_1},
+                                    {'path': '/name',
+                                     'op': 'replace',
+                                     'value': test_name_2}],
+                                   headers={api_base.Version.string: "1.5"},
+                                   expect_errors=True)
+        self.assertEqual('application/json', response.content_type)
+        self.assertEqual(http_client.BAD_REQUEST, response.status_code)
+        self.assertIn(test_name_1, response.json['error_message'])
+
+    def test_patch_update_name_twice_second_invalid(self):
+        test_name = 'Guido Van Error'
+        response = self.patch_json('/nodes/%s' % self.node.uuid,
+                                   [{'path': '/name',
+                                     'op': 'add',
+                                     'value': 'node-0'},
+                                    {'path': '/name',
+                                     'op': 'replace',
+                                     'value': test_name}],
+                                   headers={api_base.Version.string: "1.5"},
+                                   expect_errors=True)
+        self.assertEqual('application/json', response.content_type)
+        self.assertEqual(http_client.BAD_REQUEST, response.status_code)
+        self.assertIn(test_name, response.json['error_message'])
+
     def test_patch_duplicate_name(self):
         node = obj_utils.create_test_node(self.context,
                                           uuid=uuidutils.generate_uuid())
@@ -1308,7 +1370,7 @@ class TestPatch(test_api_base.BaseApiTest):
         self.assertEqual(http_client.CONFLICT, response.status_code)
         self.assertTrue(response.json['error_message'])
 
-    @mock.patch.object(api_node.NodesController, '_check_name_acceptable')
+    @mock.patch.object(api_node.NodesController, '_check_names_acceptable')
     def test_patch_name_remove_ok(self, cna_mock):
         self.mock_update_node.return_value = self.node
         response = self.patch_json('/nodes/%s' % self.node.uuid,
@@ -1379,6 +1441,34 @@ class TestPost(test_api_base.BaseApiTest):
         expected_location = '/v1/nodes/%s' % ndict['uuid']
         self.assertEqual(urlparse.urlparse(response.location).path,
                          expected_location)
+
+    def test_create_node_name_empty_invalid(self):
+        ndict = test_api_utils.post_get_test_node(name='')
+        response = self.post_json('/nodes', ndict,
+                                  headers={api_base.Version.string: "1.10"},
+                                  expect_errors=True)
+        self.assertEqual(http_client.BAD_REQUEST, response.status_int)
+        self.assertEqual('application/json', response.content_type)
+        self.assertTrue(response.json['error_message'])
+
+    def test_create_node_name_empty_not_acceptable(self):
+        ndict = test_api_utils.post_get_test_node(name='')
+        response = self.post_json('/nodes', ndict, expect_errors=True)
+        self.assertEqual(http_client.NOT_ACCEPTABLE, response.status_int)
+        self.assertEqual('application/json', response.content_type)
+        self.assertTrue(response.json['error_message'])
+
+    def test_create_node_reserved_name(self):
+        reserved_names = api_utils.get_controller_reserved_names(
+            api_node.NodesController)
+        for name in reserved_names:
+            ndict = test_api_utils.post_get_test_node(name=name)
+            response = self.post_json(
+                '/nodes', ndict, headers={api_base.Version.string: "1.10"},
+                expect_errors=True)
+            self.assertEqual(http_client.BAD_REQUEST, response.status_int)
+            self.assertEqual('application/json', response.content_type)
+            self.assertTrue(response.json['error_message'])
 
     def test_create_node_default_state_none(self):
         ndict = test_api_utils.post_get_test_node()

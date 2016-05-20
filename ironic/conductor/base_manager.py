@@ -15,15 +15,16 @@
 import inspect
 import threading
 
+import eventlet
 import futurist
 from futurist import periodics
 from futurist import rejection
 from oslo_config import cfg
-from oslo_context import context as ironic_context
 from oslo_db import exception as db_exception
 from oslo_log import log
 from oslo_utils import excutils
 
+from ironic.common import context as ironic_context
 from ironic.common import driver_factory
 from ironic.common import exception
 from ironic.common import hash_ring as hash
@@ -175,6 +176,13 @@ class BaseConductorManager(object):
         self._fail_if_in_state(ironic_context.get_admin_context(), filters,
                                states.DEPLOYING, 'provision_updated_at',
                                last_error=last_error)
+
+        # Start consoles if it set enabled in a greenthread.
+        try:
+            self._spawn_worker(self._start_consoles,
+                               ironic_context.get_admin_context())
+        except exception.NoFreeConductorWorker:
+            LOG.warning(_LW('Failed to start worker for restarting consoles.'))
 
         # Spawn a dedicated greenthread for the keepalive
         try:
@@ -371,3 +379,48 @@ class BaseConductorManager(object):
             workers_count += 1
             if workers_count >= CONF.conductor.periodic_max_workers:
                 break
+
+    def _start_consoles(self, context):
+        """Start consoles if set enabled.
+
+        :param: context: request context
+        """
+        filters = {'console_enabled': True}
+
+        node_iter = self.iter_nodes(filters=filters)
+
+        for node_uuid, driver in node_iter:
+            try:
+                with task_manager.acquire(context, node_uuid, shared=False,
+                                          purpose='start console') as task:
+                    try:
+                        LOG.debug('Trying to start console of node %(node)s',
+                                  {'node': node_uuid})
+                        task.driver.console.start_console(task)
+                        LOG.info(_LI('Successfully started console of node '
+                                     '%(node)s'), {'node': node_uuid})
+                    except Exception as err:
+                        msg = (_('Failed to start console of node %(node)s '
+                                 'while starting the conductor, so changing '
+                                 'the console_enabled status to False, error: '
+                                 '%(err)s')
+                               % {'node': node_uuid, 'err': err})
+                        LOG.error(msg)
+                        # If starting console failed, set node console_enabled
+                        # back to False and set node's last error.
+                        task.node.last_error = msg
+                        task.node.console_enabled = False
+                        task.node.save()
+            except exception.NodeLocked:
+                LOG.warning(_LW('Node %(node)s is locked while trying to '
+                                'start console on conductor startup'),
+                            {'node': node_uuid})
+                continue
+            except exception.NodeNotFound:
+                LOG.warning(_LW("During starting console on conductor "
+                                "startup, node %(node)s was not found"),
+                            {'node': node_uuid})
+                continue
+            finally:
+                # Yield on every iteration
+                eventlet.sleep(0)

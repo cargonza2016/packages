@@ -249,13 +249,15 @@ class UpdateNodeTestCase(mgr_utils.ServiceSetUpMixin,
         node = obj_utils.create_test_node(self.context, driver='fake',
                                           instance_uuid=None,
                                           power_state=states.NOSTATE)
-        node.instance_uuid = 'fake-uuid'
+        uuid1 = uuidutils.generate_uuid()
+        uuid2 = uuidutils.generate_uuid()
+        node.instance_uuid = uuid1
         self.service.update_node(self.context, node)
 
         # Check if the change was applied
-        node.instance_uuid = 'meow'
+        node.instance_uuid = uuid2
         node.refresh()
-        self.assertEqual('fake-uuid', node.instance_uuid)
+        self.assertEqual(uuid1, node.instance_uuid)
 
     def test_associate_node_powered_off(self):
         self._test_associate_node(states.POWER_OFF)
@@ -288,8 +290,9 @@ class UpdateNodeTestCase(mgr_utils.ServiceSetUpMixin,
 class VendorPassthruTestCase(mgr_utils.ServiceSetUpMixin,
                              tests_db_base.DbTestCase):
 
+    @mock.patch.object(task_manager.TaskManager, 'upgrade_lock')
     @mock.patch.object(task_manager.TaskManager, 'spawn_after')
-    def test_vendor_passthru_async(self, mock_spawn):
+    def test_vendor_passthru_async(self, mock_spawn, mock_upgrade):
         node = obj_utils.create_test_node(self.context, driver='fake')
         info = {'bar': 'baz'}
         self._start_service()
@@ -305,13 +308,17 @@ class VendorPassthruTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertIsNone(response['return'])
         self.assertTrue(response['async'])
 
+        # Assert lock was upgraded to an exclusive one
+        self.assertEqual(1, mock_upgrade.call_count)
+
         node.refresh()
         self.assertIsNone(node.last_error)
         # Verify reservation has been cleared.
         self.assertIsNone(node.reservation)
 
+    @mock.patch.object(task_manager.TaskManager, 'upgrade_lock')
     @mock.patch.object(task_manager.TaskManager, 'spawn_after')
-    def test_vendor_passthru_sync(self, mock_spawn):
+    def test_vendor_passthru_sync(self, mock_spawn, mock_upgrade):
         node = obj_utils.create_test_node(self.context, driver='fake')
         info = {'bar': 'meow'}
         self._start_service()
@@ -327,9 +334,38 @@ class VendorPassthruTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertTrue(response['return'])
         self.assertFalse(response['async'])
 
+        # Assert lock was upgraded to an exclusive one
+        self.assertEqual(1, mock_upgrade.call_count)
+
         node.refresh()
         self.assertIsNone(node.last_error)
         # Verify reservation has been cleared.
+        self.assertIsNone(node.reservation)
+
+    @mock.patch.object(task_manager.TaskManager, 'upgrade_lock')
+    @mock.patch.object(task_manager.TaskManager, 'spawn_after')
+    def test_vendor_passthru_shared_lock(self, mock_spawn, mock_upgrade):
+        node = obj_utils.create_test_node(self.context, driver='fake')
+        info = {'bar': 'woof'}
+        self._start_service()
+
+        response = self.service.vendor_passthru(self.context, node.uuid,
+                                                'fourth_method_shared_lock',
+                                                'POST', info)
+        # Waiting to make sure the below assertions are valid.
+        self._stop_service()
+
+        # Assert spawn_after was called
+        self.assertTrue(mock_spawn.called)
+        self.assertIsNone(response['return'])
+        self.assertTrue(response['async'])
+
+        # Assert lock was never upgraded to an exclusive one
+        self.assertFalse(mock_upgrade.called)
+
+        node.refresh()
+        self.assertIsNone(node.last_error)
+        # Verify there's no reservation on the node
         self.assertIsNone(node.reservation)
 
     def test_vendor_passthru_http_method_not_supported(self):
@@ -1521,7 +1557,8 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         # test a node can continue cleaning via RPC
         prv_state = return_state
         tgt_prv_state = states.MANAGEABLE if manual else states.AVAILABLE
-        driver_info = {'clean_steps': self.clean_steps}
+        driver_info = {'clean_steps': self.clean_steps,
+                       'clean_step_index': 0}
         node = obj_utils.create_test_node(self.context, driver='fake',
                                           provision_state=prv_state,
                                           target_provision_state=tgt_prv_state,
@@ -1543,13 +1580,11 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
     def test_continue_node_clean_manual(self):
         self._continue_node_clean(states.CLEANWAIT, manual=True)
 
-    def test_continue_node_clean_backward_compat(self):
-        self._continue_node_clean(states.CLEANING)
-
     @mock.patch('ironic.conductor.manager.ConductorManager._spawn_worker')
     def _continue_node_clean_skip_step(self, mock_spawn, skip=True):
         # test that skipping current step mechanism works
-        driver_info = {'clean_steps': self.clean_steps}
+        driver_info = {'clean_steps': self.clean_steps,
+                       'clean_step_index': 0}
         if not skip:
             driver_info['skip_current_clean_step'] = skip
         node = obj_utils.create_test_node(
@@ -1579,7 +1614,8 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         last_clean_step = self.clean_steps[0]
         last_clean_step['abortable'] = False
         last_clean_step['abort_after'] = True
-        driver_info = {'clean_steps': self.clean_steps}
+        driver_info = {'clean_steps': self.clean_steps,
+                       'clean_step_index': 0}
         tgt_prov_state = states.MANAGEABLE if manual else states.AVAILABLE
         node = obj_utils.create_test_node(
             self.context, driver='fake', provision_state=states.CLEANWAIT,
@@ -1836,9 +1872,6 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
     def test_do_next_clean_step_automated_first_step_async(self):
         self._do_next_clean_step_first_step_async(states.CLEANWAIT)
 
-    def test_do_next_clean_step_first_step_async_backward_compat(self):
-        self._do_next_clean_step_first_step_async(states.CLEANING)
-
     def test_do_next_clean_step_manual_first_step_async(self):
         self._do_next_clean_step_first_step_async(
             states.CLEANWAIT, clean_steps=[self.deploy_raid])
@@ -1876,9 +1909,6 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
 
     def test_do_next_clean_step_continue_from_last_cleaning(self):
         self._do_next_clean_step_continue_from_last_cleaning(states.CLEANWAIT)
-
-    def test_do_next_clean_step_continue_from_last_cleaning_backward_com(self):
-        self._do_next_clean_step_continue_from_last_cleaning(states.CLEANING)
 
     def test_do_next_clean_step_manual_continue_from_last_cleaning(self):
         self._do_next_clean_step_continue_from_last_cleaning(states.CLEANWAIT,
@@ -2007,11 +2037,15 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
     def test__do_next_clean_step_manual_execute_fail(self):
         self._do_next_clean_step_execute_fail(manual=True)
 
-    @mock.patch('ironic.drivers.modules.fake.FakeDeploy.execute_clean_step')
+    @mock.patch.object(manager, 'LOG', autospec=True)
+    @mock.patch('ironic.drivers.modules.fake.FakeDeploy.execute_clean_step',
+                autospec=True)
+    @mock.patch('ironic.drivers.modules.fake.FakePower.execute_clean_step',
+                autospec=True)
     @mock.patch.object(fake.FakeDeploy, 'tear_down_cleaning', autospec=True)
-    def _do_next_clean_step_fail_in_tear_down_cleaning(self, tear_mock,
-                                                       mock_execute,
-                                                       manual=True):
+    def _do_next_clean_step_fail_in_tear_down_cleaning(
+            self, tear_mock, power_exec_mock, deploy_exec_mock, log_mock,
+            manual=True):
         tgt_prov_state = states.MANAGEABLE if manual else states.AVAILABLE
         node = obj_utils.create_test_node(
             self.context, driver='fake',
@@ -2022,7 +2056,8 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
                                   'clean_step_index': None},
             clean_step={})
 
-        mock_execute.return_value = None
+        deploy_exec_mock.return_value = None
+        power_exec_mock.return_value = None
         tear_mock.side_effect = Exception()
 
         self._start_service()
@@ -2042,7 +2077,18 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertIsNotNone(node.last_error)
         self.assertEqual(1, tear_mock.call_count)
         self.assertTrue(node.maintenance)
-        mock_execute.assert_called_once_with(mock.ANY, self.clean_steps[0])
+        deploy_exec_calls = [
+            mock.call(mock.ANY, mock.ANY, self.clean_steps[0]),
+            mock.call(mock.ANY, mock.ANY, self.clean_steps[2]),
+        ]
+        self.assertEqual(deploy_exec_calls, deploy_exec_mock.call_args_list)
+
+        power_exec_calls = [
+            mock.call(mock.ANY, mock.ANY, self.clean_steps[1]),
+        ]
+        self.assertEqual(power_exec_calls, power_exec_mock.call_args_list)
+        log_mock.exception.assert_called_once_with(
+            'Failed to tear down from cleaning for node {}'.format(node.uuid))
 
     def test__do_next_clean_step_automated_fail_in_tear_down_cleaning(self):
         self._do_next_clean_step_fail_in_tear_down_cleaning()
@@ -2169,45 +2215,6 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         with task_manager.acquire(self.context, node.uuid) as task:
             step_index = self.service._get_node_next_clean_steps(task)
             self.assertEqual(0, step_index)
-
-    def __get_node_next_clean_steps_backwards_compat(self, skip=True):
-        driver_internal_info = {'clean_steps': self.clean_steps}
-        node = obj_utils.create_test_node(
-            self.context, driver='fake',
-            provision_state=states.CLEANWAIT,
-            target_provision_state=states.AVAILABLE,
-            driver_internal_info=driver_internal_info,
-            last_error=None,
-            clean_step=self.clean_steps[0])
-
-        with task_manager.acquire(self.context, node.uuid) as task:
-            step_index = self.service._get_node_next_clean_steps(
-                task, skip_current_step=skip)
-            expected_index = 1 if skip else 0
-            self.assertEqual(expected_index, step_index)
-
-    def test__get_node_next_clean_steps_backwards_compat(self):
-        self.__get_node_next_clean_steps_backwards_compat()
-
-    def test__get_node_next_clean_steps_no_skip_backwards_compat(self):
-        self.__get_node_next_clean_steps_backwards_compat(skip=False)
-
-    def test__get_node_next_clean_steps_bad_clean_step(self):
-        # NOTE(rloo) for backwards compatibility
-        driver_internal_info = {'clean_steps': self.clean_steps}
-        node = obj_utils.create_test_node(
-            self.context, driver='fake',
-            provision_state=states.CLEANWAIT,
-            target_provision_state=states.AVAILABLE,
-            driver_internal_info=driver_internal_info,
-            last_error=None,
-            clean_step={'interface': 'deploy',
-                        'step': 'not_a_clean_step',
-                        'priority': 100})
-
-        with task_manager.acquire(self.context, node.uuid) as task:
-            self.assertRaises(exception.NodeCleaningFailure,
-                              self.service._get_node_next_clean_steps, task)
 
 
 @mgr_utils.mock_record_keepalive
@@ -2548,8 +2555,8 @@ class DestroyNodeTestCase(mgr_utils.ServiceSetUpMixin,
 
     def test_destroy_node_associated(self):
         self._start_service()
-        node = obj_utils.create_test_node(self.context,
-                                          instance_uuid='fake-uuid')
+        node = obj_utils.create_test_node(
+            self.context, instance_uuid=uuidutils.generate_uuid())
 
         exc = self.assertRaises(messaging.rpc.ExpectedException,
                                 self.service.destroy_node,
@@ -2577,10 +2584,9 @@ class DestroyNodeTestCase(mgr_utils.ServiceSetUpMixin,
 
     def test_destroy_node_allowed_in_maintenance(self):
         self._start_service()
-        node = obj_utils.create_test_node(self.context,
-                                          instance_uuid='fake-uuid',
-                                          provision_state=states.ACTIVE,
-                                          maintenance=True)
+        node = obj_utils.create_test_node(
+            self.context, instance_uuid=uuidutils.generate_uuid(),
+            provision_state=states.ACTIVE, maintenance=True)
         self.service.destroy_node(self.context, node.uuid)
         self.assertRaises(exception.NodeNotFound,
                           self.dbapi.get_node_by_uuid,

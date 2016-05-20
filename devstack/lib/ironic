@@ -33,6 +33,14 @@ set +o pipefail
 GITDIR["python-ironicclient"]=$DEST/python-ironicclient
 GITDIR["ironic-lib"]=$DEST/ironic-lib
 
+GITREPO["pyghmi"]=${PYGHMI_REPO:-${GIT_BASE}/openstack/pyghmi.git}
+GITBRANCH["pyghmi"]=${PYGHMI_BRANCH:-master}
+GITDIR["pyghmi"]=$DEST/pyghmi
+
+GITREPO["virtualbmc"]=${VIRTUALBMC_REPO:-${GIT_BASE}/openstack/virtualbmc.git}
+GITBRANCH["virtualbmc"]=${VIRTUALBMC_BRANCH:-master}
+GITDIR["virtualbmc"]=$DEST/virtualbmc
+
 IRONIC_DIR=$DEST/ironic
 IRONIC_DEVSTACK_DIR=$IRONIC_DIR/devstack
 IRONIC_DEVSTACK_FILES_DIR=$IRONIC_DEVSTACK_DIR/files
@@ -54,12 +62,32 @@ IRONIC_HW_NODE_RAM=${IRONIC_HW_NODE_RAM:-512}
 IRONIC_HW_NODE_DISK=${IRONIC_HW_NODE_DISK:-10}
 IRONIC_HW_EPHEMERAL_DISK=${IRONIC_HW_EPHEMERAL_DISK:-0}
 IRONIC_HW_ARCH=${IRONIC_HW_ARCH:-x86_64}
-# The file is composed of multiple lines, each line includes four field
-# separated by white space: IPMI address, MAC address, IPMI username
-# and IPMI password.
+
+# The file is composed of multiple lines, each line includes fields
+# separated by white space, in the format:
 #
-#   192.168.110.107 00:1e:67:57:50:4c root otc123
-IRONIC_IPMIINFO_FILE=${IRONIC_IPMIINFO_FILE:-$IRONIC_DATA_DIR/hardware_info}
+# <BMC address> <MAC address> <BMC username> <BMC password> [<driver specfic fields>]
+#
+# For example:
+#
+# 192.168.110.107 00:1e:67:57:50:4c root otc123
+#
+# Supported IRONIC_DEPLOY_DRIVERs:
+# *_ipmitool:
+#   <BMC address> <MAC address> <BMC username> <BMC password>
+#
+# *_cimc:
+#   <BMC address> <MAC address> <BMC username> <BMC password>
+#
+# *_ucs:
+#   <BMC address> <MAC address> <BMC username> <BMC password> <UCS service profile>
+#
+# IRONIC_IPMIINFO_FILE is deprecated, please use IRONIC_HWINFO_FILE. IRONIC_IPMIINFO_FILE will be removed in Ocata.
+IRONIC_IPMIINFO_FILE=${IRONIC_IPMIINFO_FILE:-""}
+if [ ! -z "$IRONIC_IPMIINFO_FILE" ]; then
+    deprecated "IRONIC_IPMIINFO_FILE is deprecated, please switch to IRONIC_HWINFO_FILE. IRONIC_IPMIINFO_FILE will be removed in Ocata."
+fi
+IRONIC_HWINFO_FILE=${IRONIC_HWINFO_FILE:-${IRONIC_IPMIINFO_FILE:-$IRONIC_DATA_DIR/hardware_info}}
 
 # Set up defaults for functional / integration testing
 IRONIC_NODE_UUID=${IRONIC_NODE_UUID:-`uuidgen`}
@@ -69,6 +97,7 @@ IRONIC_BAREMETAL_BASIC_OPS=$(trueorfalse False IRONIC_BAREMETAL_BASIC_OPS)
 IRONIC_ENABLED_DRIVERS=${IRONIC_ENABLED_DRIVERS:-fake,pxe_ssh,pxe_ipmitool}
 IRONIC_SSH_USERNAME=${IRONIC_SSH_USERNAME:-`whoami`}
 IRONIC_SSH_TIMEOUT=${IRONIC_SSH_TIMEOUT:-15}
+IRONIC_SSH_ATTEMPTS=${IRONIC_SSH_ATTEMPTS:-5}
 IRONIC_SSH_KEY_DIR=${IRONIC_SSH_KEY_DIR:-$IRONIC_DATA_DIR/ssh_keys}
 IRONIC_SSH_KEY_FILENAME=${IRONIC_SSH_KEY_FILENAME:-ironic_key}
 IRONIC_KEY_FILE=${IRONIC_KEY_FILE:-$IRONIC_SSH_KEY_DIR/$IRONIC_SSH_KEY_FILENAME}
@@ -81,15 +110,18 @@ IRONIC_VM_COUNT=${IRONIC_VM_COUNT:-1}
 IRONIC_VM_SPECS_CPU=${IRONIC_VM_SPECS_CPU:-1}
 IRONIC_VM_SPECS_RAM=${IRONIC_VM_SPECS_RAM:-1024}
 IRONIC_VM_SPECS_DISK=${IRONIC_VM_SPECS_DISK:-10}
+IRONIC_VM_SPECS_DISK_FORMAT=${IRONIC_VM_SPECS_DISK_FORMAT:-qcow2}
 IRONIC_VM_EPHEMERAL_DISK=${IRONIC_VM_EPHEMERAL_DISK:-0}
 IRONIC_VM_EMULATOR=${IRONIC_VM_EMULATOR:-/usr/bin/qemu-system-x86_64}
 IRONIC_VM_NETWORK_BRIDGE=${IRONIC_VM_NETWORK_BRIDGE:-brbm}
 IRONIC_VM_NETWORK_RANGE=${IRONIC_VM_NETWORK_RANGE:-192.0.2.0/24}
 IRONIC_VM_MACS_CSV_FILE=${IRONIC_VM_MACS_CSV_FILE:-$IRONIC_DATA_DIR/ironic_macs.csv}
 IRONIC_AUTHORIZED_KEYS_FILE=${IRONIC_AUTHORIZED_KEYS_FILE:-$HOME/.ssh/authorized_keys}
+IRONIC_CLEAN_NET_NAME=${IRONIC_CLEAN_NET_NAME:-private}
+IRONIC_EXTRA_PXE_PARAMS=${IRONIC_EXTRA_PXE_PARAMS:-}
 
 # By default, baremetal VMs will console output to file.
-IRONIC_VM_LOG_CONSOLE=${IRONIC_VM_LOG_CONSOLE:-True}
+IRONIC_VM_LOG_CONSOLE=$(trueorfalse True IRONIC_VM_LOG_CONSOLE)
 IRONIC_VM_LOG_DIR=${IRONIC_VM_LOG_DIR:-$IRONIC_DATA_DIR/logs/}
 IRONIC_VM_LOG_ROTATE=$(trueorfalse True IRONIC_VM_LOG_ROTATE)
 
@@ -97,7 +129,7 @@ IRONIC_VM_LOG_ROTATE=$(trueorfalse True IRONIC_VM_LOG_ROTATE)
 IRONIC_BUILD_DEPLOY_RAMDISK=$(trueorfalse True IRONIC_BUILD_DEPLOY_RAMDISK)
 
 # Ironic IPA ramdisk type, supported types are: coreos, tinyipa.
-IRONIC_RAMDISK_TYPE=${IRONIC_RAMDISK_TYPE:-coreos}
+IRONIC_RAMDISK_TYPE=${IRONIC_RAMDISK_TYPE:-tinyipa}
 
 # If not use DIB, these files are used as deploy ramdisk/kernel.
 # (The value must be an absolute path)
@@ -105,11 +137,32 @@ IRONIC_DEPLOY_RAMDISK=${IRONIC_DEPLOY_RAMDISK:-}
 IRONIC_DEPLOY_KERNEL=${IRONIC_DEPLOY_KERNEL:-}
 IRONIC_DEPLOY_ELEMENT=${IRONIC_DEPLOY_ELEMENT:-deploy-ironic}
 
-IRONIC_AGENT_KERNEL_URL=${IRONIC_AGENT_KERNEL_URL:-http://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe.vmlinuz}
-IRONIC_AGENT_RAMDISK_URL=${IRONIC_AGENT_RAMDISK_URL:-http://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe_image-oem.cpio.gz}
+# NOTE(jroll) this needs to be updated when stable branches are cut
+IPA_DOWNLOAD_BRANCH=${IPA_DOWNLOAD_BRANCH:-master}
+IPA_DOWNLOAD_BRANCH=$(echo $IPA_DOWNLOAD_BRANCH | tr / -)
+
+case $IRONIC_RAMDISK_TYPE in
+    coreos)
+        IRONIC_AGENT_KERNEL_URL=${IRONIC_AGENT_KERNEL_URL:-https://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe-${IPA_DOWNLOAD_BRANCH}.vmlinuz}
+        IRONIC_AGENT_RAMDISK_URL=${IRONIC_AGENT_RAMDISK_URL:-https://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe_image-oem-${IPA_DOWNLOAD_BRANCH}.cpio.gz}
+    ;;
+    tinyipa)
+        IRONIC_AGENT_KERNEL_URL=${IRONIC_AGENT_KERNEL_URL:-https://tarballs.openstack.org/ironic-python-agent/tinyipa/files/tinyipa-${IPA_DOWNLOAD_BRANCH}.vmlinuz}
+        IRONIC_AGENT_RAMDISK_URL=${IRONIC_AGENT_RAMDISK_URL:-https://tarballs.openstack.org/ironic-python-agent/tinyipa/files/tinyipa-${IPA_DOWNLOAD_BRANCH}.gz}
+    ;;
+    dib)
+        echo "IRONIC_RAMDISK_TYPE setting 'dib' has no pre-built images"
+    ;;
+    *)
+        die $LINENO "Unrecognised IRONIC_RAMDISK_TYPE: $IRONIC_RAMDISK_TYPE. Expected 'coreos', 'tinyipa' or 'dib'"
+    ;;
+esac
 
 # Which deploy driver to use - valid choices right now
 # are ``pxe_ssh``, ``pxe_ipmitool``, ``agent_ssh`` and ``agent_ipmitool``.
+#
+# Additional valid choices if IRONIC_IS_HARDWARE == true are:
+# ``pxe_iscsi_cimc``, ``pxe_agent_cimc``, ``pxe_ucs`` and ``pxe_cimc``.
 IRONIC_DEPLOY_DRIVER=${IRONIC_DEPLOY_DRIVER:-pxe_ssh}
 
 # TODO(agordeev): replace 'ubuntu' with host distro name getting
@@ -124,7 +177,7 @@ IRONIC_SERVICE_PORT=${IRONIC_SERVICE_PORT:-6385}
 IRONIC_HOSTPORT=${IRONIC_HOSTPORT:-$SERVICE_HOST:$IRONIC_SERVICE_PORT}
 
 # Enable iPXE
-IRONIC_IPXE_ENABLED=$(trueorfalse False IRONIC_IPXE_ENABLED)
+IRONIC_IPXE_ENABLED=$(trueorfalse True IRONIC_IPXE_ENABLED)
 IRONIC_HTTP_DIR=${IRONIC_HTTP_DIR:-$IRONIC_DATA_DIR/httpboot}
 IRONIC_HTTP_SERVER=${IRONIC_HTTP_SERVER:-$HOST_IP}
 IRONIC_HTTP_PORT=${IRONIC_HTTP_PORT:-8088}
@@ -157,6 +210,10 @@ IRONIC_LIBVIRT_HOOKS_PATH=${IRONIC_LIBVIRT_HOOKS_PATH:-/etc/libvirt/hooks/}
 # keystone and noauth.
 IRONIC_AUTH_STRATEGY=${IRONIC_AUTH_STRATEGY:-keystone}
 
+# By default, terminal SSL certificate is disabled.
+IRONIC_TERMINAL_SSL=$(trueorfalse False IRONIC_TERMINAL_SSL)
+IRONIC_TERMINAL_CERT_DIR=${IRONIC_TERMINAL_CERT_DIR:-$IRONIC_DATA_DIR/terminal_cert/}
+
 # get_pxe_boot_file() - Get the PXE/iPXE boot file path
 function get_pxe_boot_file {
     local relpath=syslinux/pxelinux.0
@@ -176,6 +233,8 @@ function get_pxe_boot_file {
 
 # PXE boot image
 IRONIC_PXE_BOOT_IMAGE=${IRONIC_PXE_BOOT_IMAGE:-$(get_pxe_boot_file)}
+
+IRONIC_AUTOMATED_CLEAN_ENABLED=$(trueorfalse True IRONIC_AUTOMATED_CLEAN_ENABLED)
 
 
 # Functions
@@ -198,9 +257,42 @@ function is_deployed_by_ipmitool {
     return 1
 }
 
+function is_deployed_by_cimc {
+    [[ -z "${IRONIC_DEPLOY_DRIVER##*_cimc}" ]] && return 0
+    return 1
+}
+
+function is_deployed_by_ucs {
+    [[ -z "${IRONIC_DEPLOY_DRIVER##*_ucs}" ]] && return 0
+    return 1
+}
+
 function is_deployed_with_ipa_ramdisk {
     is_deployed_by_agent || [[ "$IRONIC_DEPLOY_DRIVER_ISCSI_WITH_IPA" == "True" ]] && return 0
     return 1
+}
+
+function setup_virtualbmc {
+    # Install pyghmi from source, if requested, otherwise it will be
+    # downloaded as part of the virtualbmc installation
+    if use_library_from_git "pyghmi"; then
+        git_clone_by_name "pyghmi"
+        setup_dev_lib "pyghmi"
+    fi
+
+    if use_library_from_git "virtualbmc"; then
+        git_clone_by_name "virtualbmc"
+        setup_dev_lib "virtualbmc"
+    else
+        pip_install "virtualbmc"
+    fi
+
+    if [[ ! -d $(dirname $IRONIC_VBMC_CONFIG_FILE) ]]; then
+        mkdir -p $(dirname $IRONIC_VBMC_CONFIG_FILE)
+    fi
+
+    iniset $IRONIC_VBMC_CONFIG_FILE log debug True
+    iniset $IRONIC_VBMC_CONFIG_FILE log logfile $IRONIC_VBMC_LOGFILE
 }
 
 # install_ironic() - Install the things!
@@ -228,14 +320,7 @@ function install_ironic {
     fi
 
     if is_deployed_by_ipmitool && [[ "$IRONIC_IS_HARDWARE" == "False" ]]; then
-        pip_install "virtualbmc"
-
-        if [[ ! -d $(dirname $IRONIC_VBMC_CONFIG_FILE) ]]; then
-            mkdir -p $(dirname $IRONIC_VBMC_CONFIG_FILE)
-        fi
-
-        iniset $IRONIC_VBMC_CONFIG_FILE log debug True
-        iniset $IRONIC_VBMC_CONFIG_FILE log logfile $IRONIC_VBMC_LOGFILE
+        setup_virtualbmc
     fi
 }
 
@@ -355,6 +440,8 @@ function configure_ironic_api {
     iniset_rpc_backend ironic $IRONIC_CONF_FILE
     iniset $IRONIC_CONF_FILE api port $IRONIC_SERVICE_PORT
 
+    iniset $IRONIC_CONF_FILE conductor automated_clean $IRONIC_AUTOMATED_CLEAN_ENABLED
+
     cp -p $IRONIC_DIR/etc/ironic/policy.json $IRONIC_POLICY_JSON
 }
 
@@ -384,11 +471,28 @@ function configure_ironic_conductor {
     iniset $IRONIC_CONF_FILE pxe tftp_server $IRONIC_TFTPSERVER_IP
     iniset $IRONIC_CONF_FILE pxe tftp_root $IRONIC_TFTPBOOT_DIR
     iniset $IRONIC_CONF_FILE pxe tftp_master_path $IRONIC_TFTPBOOT_DIR/master_images
+    if [[ "$IRONIC_TERMINAL_SSL" == "True" ]]; then
+        # Make sure the cert directory exist
+        sudo mkdir -p $IRONIC_TERMINAL_CERT_DIR
+        sudo chown $STACK_USER $IRONIC_TERMINAL_CERT_DIR
+        iniset $IRONIC_CONF_FILE console terminal_cert_dir $IRONIC_TERMINAL_CERT_DIR
+        # Generate the SSL certificate
+        openssl req \
+            -x509 \
+            -days 365 \
+            -newkey rsa:1024 \
+            -nodes \
+            -keyout $IRONIC_TERMINAL_CERT_DIR/certificate.pem.key \
+            -out $IRONIC_TERMINAL_CERT_DIR/certificate.pem \
+            -subj '/O=OpenStack/OU=DevStack Servers'
+    fi
 
     local pxe_params="nofb nomodeset vga=normal console=ttyS0"
     if is_deployed_with_ipa_ramdisk; then
         pxe_params+=" systemd.journald.forward_to_console=yes ipa-debug=1"
     fi
+
+    pxe_params+=" $IRONIC_EXTRA_PXE_PARAMS"
 
     # When booting with less than 1GB, we need to switch from default tmpfs
     # to ramfs for ramdisks to decompress successfully.
@@ -437,6 +541,10 @@ function configure_ironic_conductor {
         iniset $IRONIC_CONF_FILE deploy http_root $IRONIC_HTTP_DIR
         iniset $IRONIC_CONF_FILE deploy http_url "http://$IRONIC_HTTP_SERVER:$IRONIC_HTTP_PORT"
     fi
+
+    if [[ "$IRONIC_IS_HARDWARE" == "False" ]]; then
+        iniset $IRONIC_CONF_FILE neutron port_setup_delay 15
+    fi
 }
 
 # create_ironic_cache_dir() - Part of the init_ironic() process
@@ -479,7 +587,7 @@ function init_ironic {
     if is_service_enabled neutron; then
         # Save private network as cleaning network
         local cleaning_network_uuid
-        cleaning_network_uuid=$(neutron net-list | grep private | get_field 1)
+        cleaning_network_uuid=$(neutron net-show "$IRONIC_CLEAN_NET_NAME" |  grep ' id ' | get_field 2)
         die_if_not_set $LINENO cleaning_network_uuid "Failed to get ironic cleaning network id"
         iniset $IRONIC_CONF_FILE neutron cleaning_network_uuid ${cleaning_network_uuid}
     fi
@@ -499,7 +607,7 @@ function _ironic_bm_vm_names {
     local num_vms
     num_vms=$(($IRONIC_VM_COUNT - 1))
     for idx in $(seq 0 $num_vms); do
-        echo "baremetal${IRONIC_VM_NETWORK_BRIDGE}_${idx}"
+        echo "node-${idx}"
     done
 }
 
@@ -552,16 +660,19 @@ function stop_ironic {
     sudo rm -rf $IRONIC_LIBVIRT_HOOKS_PATH/qemu
 }
 
+# create_ovs_taps is also called by the devstack/upgrade/resources.sh script
+#
+# create_ovs_taps ironic_network_id
 function create_ovs_taps {
     local ironic_net_id
-    ironic_net_id=$(neutron net-list | grep private | get_field 1)
+    ironic_net_id=$1
     die_if_not_set $LINENO ironic_net_id "Failed to get ironic network id"
 
     # Work around: No netns exists on host until a Neutron port is created.  We
     # need to create one in Neutron to know what netns to tap into prior to the
     # first node booting.
     local port_id
-    port_id=$(neutron port-create private | grep " id " | get_field 2)
+    port_id=$(neutron port-create ${ironic_net_id} | grep " id " | get_field 2)
     die_if_not_set $LINENO port_id "Failed to create neutron port"
 
     # intentional sleep to make sure the tag has been set to port
@@ -571,7 +682,7 @@ function create_ovs_taps {
     tapdev=$(sudo ip netns exec qdhcp-${ironic_net_id} ip link list | grep " tap" | cut -d':' -f2 | cut -d'@' -f1 | cut -b2-)
     die_if_not_set $LINENO tapdev "Failed to get tap device id"
     local tag_id
-    tag_id=$(sudo ovs-vsctl show |grep ${tapdev} -A1 -m1 | grep tag | cut -d':' -f2 | cut -b2-)
+    tag_id=$(sudo ovs-vsctl get port ${tapdev} tag)
     die_if_not_set $LINENO tag_id "Failed to get tag id"
 
     # make sure veth pair is not existing, otherwise delete its links
@@ -631,13 +742,15 @@ function create_bridge_and_vms {
     local vbmc_port=$IRONIC_VBMC_PORT_RANGE_START
     local vm_name
     for vm_name in $(_ironic_bm_vm_names); do
-        sudo su $STACK_USER -c "$IRONIC_SCRIPTS_DIR/create-node.sh $vm_name \
+        sudo -E su $STACK_USER -c "$IRONIC_SCRIPTS_DIR/create-node.sh $vm_name \
             $IRONIC_VM_SPECS_CPU $IRONIC_VM_SPECS_RAM $IRONIC_VM_SPECS_DISK \
             amd64 $IRONIC_VM_NETWORK_BRIDGE $IRONIC_VM_EMULATOR \
-            $vbmc_port $log_arg" >> $IRONIC_VM_MACS_CSV_FILE
+            $vbmc_port $log_arg $IRONIC_VM_SPECS_DISK_FORMAT" >> $IRONIC_VM_MACS_CSV_FILE
         vbmc_port=$((vbmc_port+1))
     done
-    create_ovs_taps
+    local ironic_net_id
+    ironic_net_id=$(neutron net-list | grep private | get_field 1)
+    create_ovs_taps $ironic_net_id
 }
 
 function wait_for_nova_resources {
@@ -704,9 +817,7 @@ function enroll_nodes {
         local ironic_node_disk=$IRONIC_HW_NODE_DISK
         local ironic_ephemeral_disk=$IRONIC_HW_EPHEMERAL_DISK
         local ironic_node_arch=$IRONIC_HW_ARCH
-        if [[ -z "${IRONIC_DEPLOY_DRIVER##*_ipmitool}" ]]; then
-            local ironic_hwinfo_file=$IRONIC_IPMIINFO_FILE
-        fi
+        local ironic_hwinfo_file=$IRONIC_HWINFO_FILE
     fi
 
     local total_nodes=0
@@ -721,23 +832,33 @@ function enroll_nodes {
                 vbmc_port=$(echo $hardware_info | awk '{print $2}')
                 node_options+=" -i ipmi_port=$vbmc_port"
             fi
-
-        elif is_deployed_by_ipmitool; then
-            local ipmi_address
-            ipmi_address=$(echo $hardware_info |awk  '{print $1}')
-            local mac_address
-            mac_address=$(echo $hardware_info |awk '{print $2}')
-            local ironic_ipmi_username
-            ironic_ipmi_username=$(echo $hardware_info |awk '{print $3}')
-            local ironic_ipmi_passwd
-            ironic_ipmi_passwd=$(echo $hardware_info |awk '{print $4}')
+        else
             # Currently we require all hardware platform have same CPU/RAM/DISK info
             # in future, this can be enhanced to support different type, and then
             # we create the bare metal flavor with minimum value
-            local node_options="-i ipmi_address=$ipmi_address -i ipmi_password=$ironic_ipmi_passwd\
-                -i ipmi_username=$ironic_ipmi_username"
-            node_options+=" -i deploy_kernel=$IRONIC_DEPLOY_KERNEL_ID"
+            local bmc_address
+            bmc_address=$(echo $hardware_info |awk  '{print $1}')
+            local mac_address
+            mac_address=$(echo $hardware_info |awk '{print $2}')
+            local bmc_username
+            bmc_username=$(echo $hardware_info |awk '{print $3}')
+            local bmc_passwd
+            bmc_passwd=$(echo $hardware_info |awk '{print $4}')
+            local node_options="-i deploy_kernel=$IRONIC_DEPLOY_KERNEL_ID"
             node_options+=" -i deploy_ramdisk=$IRONIC_DEPLOY_RAMDISK_ID"
+
+            if is_deployed_by_ipmitool; then
+                node_options+=" -i ipmi_address=$bmc_address -i ipmi_password=$bmc_passwd\
+                    -i ipmi_username=$bmc_username"
+            elif is_deployed_by_cimc; then
+                node_options+=" -i cimc_address=$bmc_address -i cimc_password=$bmc_passwd\
+                    -i cimc_username=$bmc_username"
+            elif is_deployed_by_ucs; then
+                local ucs_service_profile
+                ucs_service_profile=$(echo $hardware_info |awk '{print $5}')
+                node_options+=" -i ucs_address=$bmc_address -i ucs_password=$bmc_passwd\
+                    -i ucs_username=$bmc_username -i ucs_service_profile=$ucs_service_profile"
+            fi
         fi
 
         # First node created will be used for testing in ironic w/o glance
@@ -758,6 +879,13 @@ function enroll_nodes {
             -p cpu_arch=$ironic_node_arch \
             $node_options \
             | grep " uuid " | get_field 2)
+
+        # NOTE(vsaienko) IPA didn't automatically recognize root devices less than 4Gb.
+        # Setting root hint allows to install OS on such devices.
+        # 0x1af4 is VirtIO vendor device ID.
+        if [[ "$ironic_node_disk" -lt "4" && is_deployed_by_agent ]]; then
+            ironic node-update $node_id add properties/root_device='{"vendor": "0x1af4"}'
+        fi
 
         ironic port-create --address $mac_address --node $node_id
 
@@ -825,13 +953,16 @@ function configure_ironic_ssh_keypair {
         mkdir -p $HOME/.ssh
         chmod 700 $HOME/.ssh
     fi
-    if [[ ! -e $IRONIC_KEY_FILE ]]; then
+    # recreate ssh if any part is missing
+    if [[ ! -e $IRONIC_KEY_FILE ]] || [[ ! -e $IRONIC_KEY_FILE.pub ]]; then
         if [[ ! -d $(dirname $IRONIC_KEY_FILE) ]]; then
             mkdir -p $(dirname $IRONIC_KEY_FILE)
         fi
         echo -e 'n\n' | ssh-keygen -q -t rsa -P '' -f $IRONIC_KEY_FILE
     fi
     cat $IRONIC_KEY_FILE.pub | tee -a $IRONIC_AUTHORIZED_KEYS_FILE
+    # remove duplicate keys.
+    sort -u -o $IRONIC_AUTHORIZED_KEYS_FILE $IRONIC_AUTHORIZED_KEYS_FILE
 }
 
 function ironic_ssh_check {
@@ -839,15 +970,26 @@ function ironic_ssh_check {
     local floating_ip=$2
     local port=$3
     local default_instance_user=$4
-    local active_timeout=$5
-    if ! timeout $active_timeout sh -c "while ! ssh -p $port -o StrictHostKeyChecking=no -i $key_file ${default_instance_user}@$floating_ip echo success; do sleep 1; done"; then
+    local attempt=$5
+    local status=false
+    local ssh_options="-o BatchMode=yes -o ConnectTimeout=$IRONIC_SSH_TIMEOUT -o StrictHostKeyChecking=no"
+    while [[ $attempt -gt 0 ]]; do
+        ssh -p $port $ssh_options -i $key_file ${default_instance_user}@$floating_ip exit
+        if [[ "$?" == "0" ]]; then
+            status=true
+            break
+        fi
+        attempt=$((attempt - 1))
+        echo "SSH connection failed. $attempt attempts left."
+    done
+    if ! $status; then
         die $LINENO "server didn't become ssh-able!"
     fi
 }
 
 function configure_ironic_auxiliary {
     configure_ironic_ssh_keypair
-    ironic_ssh_check $IRONIC_KEY_FILE $IRONIC_VM_SSH_ADDRESS $IRONIC_VM_SSH_PORT $IRONIC_SSH_USERNAME $IRONIC_SSH_TIMEOUT
+    ironic_ssh_check $IRONIC_KEY_FILE $IRONIC_VM_SSH_ADDRESS $IRONIC_VM_SSH_PORT $IRONIC_SSH_USERNAME $IRONIC_SSH_ATTEMPTS
 }
 
 function build_ipa_coreos_ramdisk {
@@ -895,11 +1037,6 @@ function upload_baremetal_ironic_deploy {
     declare -g IRONIC_DEPLOY_KERNEL_ID IRONIC_DEPLOY_RAMDISK_ID
     echo_summary "Creating and uploading baremetal images for ironic"
 
-    # install diskimage-builder
-    if [[ $(type -P ramdisk-image-create) == "" ]]; then
-        install_diskimage_builder
-    fi
-
     if [ -z "$IRONIC_DEPLOY_KERNEL" -o -z "$IRONIC_DEPLOY_RAMDISK" ]; then
         local IRONIC_DEPLOY_KERNEL_PATH=$TOP_DIR/files/ir-deploy-$IRONIC_DEPLOY_DRIVER.kernel
         local IRONIC_DEPLOY_RAMDISK_PATH=$TOP_DIR/files/ir-deploy-$IRONIC_DEPLOY_DRIVER.initramfs
@@ -922,11 +1059,15 @@ function upload_baremetal_ironic_deploy {
                         die $LINENO "Unrecognised IRONIC_RAMDISK_TYPE: $IRONIC_RAMDISK_TYPE. Expected 'coreos' or 'tinyipa'"
                     fi
                 else
+                    # install diskimage-builder
+                    if [[ $(type -P ramdisk-image-create) == "" ]]; then
+                        install_diskimage_builder
+                    fi
                     ramdisk-image-create $IRONIC_DEPLOY_FLAVOR \
                         -o $TOP_DIR/files/ir-deploy-$IRONIC_DEPLOY_DRIVER
                 fi
             else
-                die $LINENO "Deploy kernel+ramdisk files don't exist and cannot be build in OFFLINE mode"
+                die $LINENO "Deploy kernel+ramdisk files don't exist and cannot be built in OFFLINE mode"
             fi
         else
             if is_deployed_with_ipa_ramdisk; then
@@ -990,8 +1131,10 @@ function cleanup_baremetal_basic_ops {
 
     local vm_name
     for vm_name in $(_ironic_bm_vm_names); do
-        sudo su $STACK_USER -c "$IRONIC_SCRIPTS_DIR/cleanup-node.sh $vm_name $IRONIC_VM_NETWORK_BRIDGE"
+        sudo su $STACK_USER -c "$IRONIC_SCRIPTS_DIR/cleanup-node.sh $vm_name"
     done
+
+    sudo ovs-vsctl --if-exists del-br $IRONIC_VM_NETWORK_BRIDGE
 
     sudo rm -rf /etc/xinetd.d/tftp /etc/init/tftpd-hpa.override
     restart_service xinetd
@@ -1003,6 +1146,14 @@ function cleanup_baremetal_basic_ops {
     fi
     sudo rmmod nf_conntrack_tftp || true
     sudo rmmod nf_nat_tftp || true
+}
+
+function ironic_configure_tempest {
+    local bm_flavor_id
+    bm_flavor_id=$(openstack flavor show baremetal -f value -c id)
+    die_if_not_set $LINENO bm_flavor_id "Failed to get id of baremetal flavor"
+    iniset $TEMPEST_CONFIG compute flavor_ref $bm_flavor_id
+    iniset $TEMPEST_CONFIG compute flavor_ref_alt $bm_flavor_id
 }
 
 # Restore xtrace + pipefail

@@ -178,7 +178,8 @@ class NodePowerActionTestCase(base.DbTestCase):
         self.assertEqual(states.NOSTATE, node['target_power_state'])
         self.assertIsNone(node['last_error'])
 
-    def test_node_power_action_in_same_state(self):
+    @mock.patch.object(conductor_utils, 'LOG', autospec=True)
+    def test_node_power_action_in_same_state(self, log_mock):
         """Test setting node state to its present state.
 
         Test that we don't try to set the power state if the requested
@@ -206,6 +207,10 @@ class NodePowerActionTestCase(base.DbTestCase):
                 self.assertEqual(states.POWER_ON, node['power_state'])
                 self.assertIsNone(node['target_power_state'])
                 self.assertIsNone(node['last_error'])
+                log_mock.warning.assert_called_once_with(
+                    u"Not going to change node %(node)s power state because "
+                    u"current state = requested state = '%(state)s'.",
+                    {'state': states.POWER_ON, 'node': node.uuid})
 
     def test_node_power_action_in_same_state_db_not_in_sync(self):
         """Test setting node state to its present state if DB is out of sync.
@@ -294,7 +299,7 @@ class CleanupAfterTimeoutTestCase(tests_base.TestCase):
     def setUp(self):
         super(CleanupAfterTimeoutTestCase, self).setUp()
         self.task = mock.Mock(spec=task_manager.TaskManager)
-        self.task.context = mock.sentinel.context
+        self.task.context = self.context
         self.task.driver = mock.Mock(spec_set=['deploy'])
         self.task.shared = False
         self.task.node = mock.Mock(spec_set=objects.Node)

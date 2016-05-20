@@ -207,12 +207,12 @@ Target Users
   security enhanced PXE-less deployment mechanism.
 
   The PXE driver passes management information in clear-text to the
-  bare metal node.  However, if swift proxy server has an HTTPS
-  endpoint (See :ref:`EnableHTTPSinSwift` for more information), the
-  ``iscsi_ilo`` driver provides enhanced security by passing
-  management information to and from swift endpoint over HTTPS.  The
-  management information, deploy ramdisk and boot images for the instance will
-  be retrieved over encrypted management network via iLO virtual media.
+  bare metal node.  However, if swift proxy server and glance have HTTPS
+  endpoints (See :ref:`EnableHTTPSinSwift`, :ref:`EnableHTTPSinGlance` for more
+  information), the ``iscsi_ilo`` driver provides enhanced security by
+  exchanging management information with swift and glance endpoints over HTTPS.
+  The management information, deploy ramdisk and boot images for the instance
+  will be retrieved over encrypted management network via iLO virtual media.
 
 Tested Platforms
 ~~~~~~~~~~~~~~~~
@@ -240,11 +240,11 @@ Features
 * UEFI Boot Support
 * UEFI Secure Boot Support
 * Passing management information via secure, encrypted management network
-  (virtual media) if swift proxy server has an HTTPS endpoint. See
-  :ref:`EnableHTTPSinSwift` for more info.  User image provisioning is done
-  using iSCSI over data network, so this driver has the benefit
-  of security enhancement with the same performance. It segregates management
-  info from data channel.
+  (virtual media) if swift proxy server and glance have HTTPS endpoints. See
+  :ref:`EnableHTTPSinSwift`, :ref:`EnableHTTPSinGlance` for more info.  User
+  image provisioning is done using iSCSI over data network, so this driver has
+  the benefit of security enhancement with the same performance. It segregates
+  management info from data channel.
 * Support for out-of-band cleaning operations.
 * Remote Console
 * HW Sensors
@@ -351,12 +351,12 @@ Target Users
   want to have a security enhanced PXE-less deployment mechanism.
 
   The PXE based agent drivers pass management information in clear-text to
-  the bare metal node.  However, if swift proxy server has an HTTPS
-  endpoint (See :ref:`EnableHTTPSinSwift` for more information),
-  the ``agent_ilo`` driver provides enhanced security by passing authtoken
-  and management information to and from swift endpoint over HTTPS.  The
-  management information and deploy ramdisk will be retrieved over encrypted
-  management network via iLO.
+  the bare metal node.  However, if swift proxy server and glance have HTTPS
+  endpoints (See :ref:`EnableHTTPSinSwift`, :ref:`EnableHTTPSinGlance` for more
+  information), the ``agent_ilo`` driver provides enhanced security by
+  exchanging authtoken and management information with swift and glance
+  endpoints over HTTPS.  The management information and deploy ramdisk will be
+  retrieved over encrypted management network via iLO.
 
 Tested Platforms
 ~~~~~~~~~~~~~~~~
@@ -817,12 +817,14 @@ Supported **Manual** Cleaning Operations
 
     Some devices firmware cannot be updated via this method, such as: storage
     controllers, host bus adapters, disk drive firmware, network interfaces
-    and OA.
+    and Onboard Administrator (OA).
 
 * iLO with firmware version 1.5 is minimally required to support all the
   operations.
 
 For more information on node manual cleaning, see :ref:`manual_cleaning`
+
+.. _ilo-inspection:
 
 Hardware Inspection Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -878,13 +880,11 @@ for scheduling::
 
   nova flavor-key my-baremetal-flavor set capabilities:server_model="<in> Gen8"
 
-  nova flavor-key my-baremetal-flavor set capabilities:pci_gpu_devices="> 0"
-
   nova flavor-key my-baremetal-flavor set capabilities:nic_capacity="10Gb"
 
   nova flavor-key my-baremetal-flavor set capabilities:ilo_firmware_version="<in> 2.10"
 
-  nova flavor-key my-baremetal-flavor set capabilities:secure_boot="true"
+See :ref:`capabilities-discovery` for more details and examples.
 
 Swiftless deploy for intermediate images
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1428,7 +1428,20 @@ All the fields in the firmware image block are mandatory.
    This feature assumes that while using ``file`` url scheme the file path is
    on the conductor controlling the node.
 
-* Different firmware components that can be updated are:
+.. note::
+   The ``swift`` url scheme assumes the swift account of the ``service``
+   project. The ``service`` project (tenant) is a special project created in
+   the Keystone system designed for the use of the core OpenStack services.
+   When Ironic makes use of Swift for storage purpose, the account is generally
+   ``service`` and the container is generally ``ironic`` and ``ilo`` drivers
+   use a container named ``ironic_ilo_container`` for their own purpose.
+
+.. note::
+   While using firmware files with a ``.rpm`` extension, make sure the commands
+   ``rpm2cpio`` and ``cpio`` are present on the conductor, as they are utilized
+   to extract the firmware image from the package.
+
+* The firmware components that can be updated are:
   ``ilo``, ``cpld``, ``power_pic``, ``bios`` and ``chassis``.
 * The firmware images will be updated in the order given by the operator. If
   there is any error during processing of any of the given firmware images

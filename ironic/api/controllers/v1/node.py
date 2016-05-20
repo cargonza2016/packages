@@ -118,7 +118,12 @@ def hide_fields_in_newer_versions(obj):
         obj.target_raid_config = wsme.Unset
 
 
-def assert_juno_provision_state_name(obj):
+def update_state_in_older_versions(obj):
+    """Change provision state names for API backwards compatability.
+
+    :param obj: The object being returned to the API client that is
+                to be updated by this method.
+    """
     # if requested version is < 1.2, convert AVAILABLE to the old NOSTATE
     if (pecan.request.version.minor < versions.MINOR_2_AVAILABLE_STATE and
             obj.provision_state == ir_states.AVAILABLE):
@@ -306,7 +311,7 @@ class NodeStates(base.APIBase):
         states = NodeStates()
         for attr in attr_list:
             setattr(states, attr, getattr(rpc_node, attr))
-        assert_juno_provision_state_name(states)
+        update_state_in_older_versions(states)
         return states
 
     @classmethod
@@ -748,7 +753,7 @@ class Node(base.APIBase):
         if fields is not None:
             api_utils.check_for_invalid_fields(fields, node.as_dict())
 
-        assert_juno_provision_state_name(node)
+        update_state_in_older_versions(node)
         hide_fields_in_newer_versions(node)
         show_password = pecan.request.context.show_password
         show_states_links = (
@@ -1014,21 +1019,34 @@ class NodesController(rest.RestController):
         except exception.InstanceNotFound:
             return []
 
-    def _check_name_acceptable(self, name, error_msg):
-        """Checks if a node 'name' is acceptable, it does not return a value.
+    def _check_names_acceptable(self, names, error_msg):
+        """Checks all node 'name's are acceptable, it does not return a value.
 
         This function will raise an exception for unacceptable names.
 
-        :param name: node name
-        :param error_msg: error message in case of wsme.exc.ClientSideError
+        :param names: list of node names to check
+        :param error_msg: error message in case of wsme.exc.ClientSideError,
+            should contain %(name)s placeholder.
         :raises: exception.NotAcceptable
         :raises: wsme.exc.ClientSideError
         """
         if not api_utils.allow_node_logical_names():
             raise exception.NotAcceptable()
-        if not api_utils.is_valid_node_name(name):
-            raise wsme.exc.ClientSideError(
-                error_msg, status_code=http_client.BAD_REQUEST)
+
+        reserved_names = api_utils.get_controller_reserved_names(
+            NodesController)
+        for name in names:
+            if not api_utils.is_valid_node_name(name):
+                raise wsme.exc.ClientSideError(
+                    error_msg % {'name': name},
+                    status_code=http_client.BAD_REQUEST)
+            if name in reserved_names:
+                raise wsme.exc.ClientSideError(
+                    'The word "%(name)s" is reserved and can not be used as a '
+                    'node name. Other reserved words are: %(reserved)s' %
+                    {'name': name,
+                     'reserved': ', '.join(reserved_names)},
+                    status_code=http_client.BAD_REQUEST)
 
     def _update_changed_fields(self, node, rpc_node):
         """Update rpc_node based on changed fields in a node.
@@ -1051,7 +1069,7 @@ class NodesController(rest.RestController):
         If it does, is necessary to prevent updating it because the new driver
         will not be able to stop a console started by the previous one.
 
-        :param rpc_node: RPC Node object to be veryfied.
+        :param rpc_node: RPC Node object to be verified.
         :param node_ident: the UUID or logical name of a node.
         :raises: wsme.exc.ClientSideError
         """
@@ -1208,10 +1226,9 @@ class NodesController(rest.RestController):
             e.code = http_client.BAD_REQUEST
             raise e
 
-        if node.name:
-            error_msg = _("Cannot create node with invalid name "
-                          "%(name)s") % {'name': node.name}
-            self._check_name_acceptable(node.name, error_msg)
+        if node.name != wtypes.Unset and node.name is not None:
+            error_msg = _("Cannot create node with invalid name '%(name)s'")
+            self._check_names_acceptable([node.name], error_msg)
         node.provision_state = api_utils.initial_node_provision_state()
 
         new_node = objects.Node(pecan.request.context,
@@ -1258,12 +1275,12 @@ class NodesController(rest.RestController):
             raise wsme.exc.ClientSideError(
                 msg % node_ident, status_code=http_client.CONFLICT)
 
-        name = api_utils.get_patch_value(patch, '/name')
-        if name:
-            error_msg = _("Node %(node)s: Cannot change name to invalid "
-                          "name '%(name)s'") % {'node': node_ident,
-                                                'name': name}
-            self._check_name_acceptable(name, error_msg)
+        names = api_utils.get_patch_values(patch, '/name')
+        if len(names):
+            error_msg = (_("Node %s: Cannot change name to invalid name ")
+                         % node_ident)
+            error_msg += "'%(name)s'"
+            self._check_names_acceptable(names, error_msg)
         try:
             node_dict = rpc_node.as_dict()
             # NOTE(lucasagomes):
