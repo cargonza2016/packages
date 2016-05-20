@@ -22,6 +22,7 @@ from six.moves import http_client
 from webob.static import FileIter
 import wsme
 
+from ironic.api.controllers.v1 import node as api_node
 from ironic.api.controllers.v1 import utils
 from ironic.common import exception
 from ironic import objects
@@ -56,23 +57,30 @@ class TestApiUtils(base.TestCase):
                           utils.validate_sort_dir,
                           'fake-sort')
 
-    def test_get_patch_value_no_path(self):
+    def test_get_patch_values_no_path(self):
         patch = [{'path': '/name', 'op': 'update', 'value': 'node-0'}]
         path = '/invalid'
-        value = utils.get_patch_value(patch, path)
-        self.assertIsNone(value)
+        values = utils.get_patch_values(patch, path)
+        self.assertEqual([], values)
 
-    def test_get_patch_value_remove(self):
+    def test_get_patch_values_remove(self):
         patch = [{'path': '/name', 'op': 'remove'}]
         path = '/name'
-        value = utils.get_patch_value(patch, path)
-        self.assertIsNone(value)
+        values = utils.get_patch_values(patch, path)
+        self.assertEqual([], values)
 
-    def test_get_patch_value_success(self):
+    def test_get_patch_values_success(self):
         patch = [{'path': '/name', 'op': 'replace', 'value': 'node-x'}]
         path = '/name'
-        value = utils.get_patch_value(patch, path)
-        self.assertEqual('node-x', value)
+        values = utils.get_patch_values(patch, path)
+        self.assertEqual(['node-x'], values)
+
+    def test_get_patch_values_multiple_success(self):
+        patch = [{'path': '/name', 'op': 'replace', 'value': 'node-x'},
+                 {'path': '/name', 'op': 'replace', 'value': 'node-y'}]
+        path = '/name'
+        values = utils.get_patch_values(patch, path)
+        self.assertEqual(['node-x', 'node-y'], values)
 
     def test_check_for_invalid_fields(self):
         requested = ['field_1', 'field_3']
@@ -349,3 +357,10 @@ class TestVendorPassthru(base.TestCase):
 
     def test_vendor_passthru_attach_byte_to_byte(self):
         self._test_vendor_passthru_attach(b'\x00\x01', b'\x00\x01')
+
+    def test_get_controller_reserved_names(self):
+        expected = ['maintenance', 'management', 'ports', 'states',
+                    'vendor_passthru', 'validate', 'detail']
+        self.assertEqual(sorted(expected),
+                         sorted(utils.get_controller_reserved_names(
+                                api_node.NodesController)))

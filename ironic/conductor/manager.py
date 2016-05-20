@@ -152,11 +152,8 @@ conductor_opts = [
                default=1800,
                help=_('Timeout (seconds) for waiting for node inspection. '
                       '0 - unlimited.')),
-    # TODO(rloo): Remove support for deprecated name 'clean_nodes' in Newton
-    #             cycle.
     cfg.BoolOpt('automated_clean',
                 default=True,
-                deprecated_name='clean_nodes',
                 help=_('Enables or disables automated cleaning. Automated '
                        'cleaning is a configurable set of steps, '
                        'such as erasing disk drives, that are performed on '
@@ -279,10 +276,9 @@ class ConductorManager(base_manager.BaseConductorManager):
                         http_method, info):
         """RPC method to encapsulate vendor action.
 
-        Synchronously validate driver specific info or get driver status,
-        and if successful invokes the vendor method. If the method mode
-        is 'async' the conductor will start background worker to perform
-        vendor action.
+        Synchronously validate driver specific info, and if successful invoke
+        the vendor method. If the method mode is 'async' the conductor will
+        start background worker to perform vendor action.
 
         :param context: an admin context.
         :param node_id: the id or uuid of a node.
@@ -295,7 +291,8 @@ class ConductorManager(base_manager.BaseConductorManager):
                  vendor interface or method is unsupported.
         :raises: NoFreeConductorWorker when there is no free worker to start
                  async task.
-        :raises: NodeLocked if node is locked by another conductor.
+        :raises: NodeLocked if the vendor passthru method requires an exclusive
+                 lock but the node is locked by another conductor
         :returns: A dictionary containing:
 
             :return: The response of the invoked vendor method
@@ -308,11 +305,11 @@ class ConductorManager(base_manager.BaseConductorManager):
 
         """
         LOG.debug("RPC vendor_passthru called for node %s." % node_id)
-        # NOTE(max_lobur): Even though not all vendor_passthru calls may
-        # require an exclusive lock, we need to do so to guarantee that the
-        # state doesn't unexpectedly change between doing a vendor.validate
-        # and vendor.vendor_passthru.
-        with task_manager.acquire(context, node_id, shared=False,
+        # NOTE(mariojv): Not all vendor passthru methods require an exclusive
+        # lock on a node, so we acquire a shared lock initially. If a method
+        # requires an exclusive lock, we'll acquire one after checking
+        # vendor_opts before starting validation.
+        with task_manager.acquire(context, node_id, shared=True,
                                   purpose='calling vendor passthru') as task:
             if not getattr(task.driver, 'vendor', None):
                 raise exception.UnsupportedDriverExtension(
@@ -333,6 +330,11 @@ class ConductorManager(base_manager.BaseConductorManager):
                 raise exception.InvalidParameterValue(
                     _('The method %(method)s does not support HTTP %(http)s') %
                     {'method': driver_method, 'http': http_method})
+
+            # Change shared lock to exclusive if a vendor method requires
+            # it. Vendor methods default to requiring an exclusive lock.
+            if vendor_opts['require_exclusive_lock']:
+                task.upgrade_lock()
 
             vendor_iface.validate(task, method=driver_method,
                                   http_method=http_method, **info)
@@ -612,6 +614,7 @@ class ConductorManager(base_manager.BaseConductorManager):
                     action='delete', node=task.node.uuid,
                     state=task.node.provision_state)
 
+    @task_manager.require_exclusive_lock
     def _do_node_tear_down(self, task):
         """Internal RPC method to tear down an existing node deployment."""
         node = task.node
@@ -687,26 +690,7 @@ class ConductorManager(base_manager.BaseConductorManager):
             # index of the first step in the list.
             return 0
 
-        ind = None
-        if 'clean_step_index' in node.driver_internal_info:
-            ind = node.driver_internal_info['clean_step_index']
-        else:
-            # TODO(rloo). driver_internal_info['clean_step_index'] was
-            # added in Mitaka. We need to maintain backwards compatibility
-            # so this uses the original code to get the index of the current
-            # step. This will be deleted in the Newton cycle.
-            try:
-                next_steps = node.driver_internal_info['clean_steps']
-                ind = next_steps.index(node.clean_step)
-            except (KeyError, ValueError):
-                msg = (_('Node %(node)s got an invalid last step for '
-                         '%(state)s: %(step)s.') %
-                       {'node': node.uuid, 'step': node.clean_step,
-                        'state': node.provision_state})
-                LOG.exception(msg)
-                utils.cleaning_error_handler(task, msg)
-                raise exception.NodeCleaningFailure(node=node.uuid,
-                                                    reason=msg)
+        ind = node.driver_internal_info.get('clean_step_index')
         if ind is None:
             return None
 
@@ -810,12 +794,7 @@ class ConductorManager(base_manager.BaseConductorManager):
             else:
                 target_state = None
 
-            # TODO(lucasagomes): CLEANING here for backwards compat
-            # with previous code, otherwise nodes in CLEANING when this
-            # is deployed would fail. Should be removed once the Mitaka
-            # release starts.
-            if node.provision_state not in (states.CLEANWAIT,
-                                            states.CLEANING):
+            if node.provision_state != states.CLEANWAIT:
                 raise exception.InvalidStateRequested(_(
                     'Cannot continue cleaning on %(node)s, node is in '
                     '%(state)s state, should be %(clean_state)s') %
@@ -861,11 +840,7 @@ class ConductorManager(base_manager.BaseConductorManager):
                           'to be done.', {'node': node.uuid,
                                           'step': step_name})
 
-            # TODO(lucasagomes): This conditional is here for backwards
-            # compat with previous code. Should be removed once the Mitaka
-            # release starts.
-            if node.provision_state == states.CLEANWAIT:
-                task.process_event('resume', target_state=target_state)
+            task.process_event('resume', target_state=target_state)
 
             task.set_spawn_error_hook(utils.spawn_cleaning_error_handler,
                                       task.node)
@@ -874,6 +849,7 @@ class ConductorManager(base_manager.BaseConductorManager):
                 self._do_next_clean_step,
                 task, next_step_index)
 
+    @task_manager.require_exclusive_lock
     def _do_node_clean(self, task, clean_steps=None):
         """Internal RPC method to perform cleaning of a node.
 
@@ -926,13 +902,6 @@ class ConductorManager(base_manager.BaseConductorManager):
             LOG.exception(msg)
             return utils.cleaning_error_handler(task, msg)
 
-        # TODO(lucasagomes): Should be removed once the Mitaka release starts
-        if prepare_result == states.CLEANING:
-            LOG.warning(_LW('Returning CLEANING for asynchronous prepare '
-                            'cleaning has been deprecated. Please use '
-                            'CLEANWAIT instead.'))
-            prepare_result = states.CLEANWAIT
-
         if prepare_result == states.CLEANWAIT:
             # Prepare is asynchronous, the deploy driver will need to
             # set node.driver_internal_info['clean_steps'] and
@@ -957,6 +926,7 @@ class ConductorManager(base_manager.BaseConductorManager):
         step_index = 0 if steps else None
         self._do_next_clean_step(task, step_index)
 
+    @task_manager.require_exclusive_lock
     def _do_next_clean_step(self, task, step_index):
         """Do cleaning, starting from the specified clean step.
 
@@ -1003,14 +973,6 @@ class ConductorManager(base_manager.BaseConductorManager):
                 utils.cleaning_error_handler(task, msg)
                 return
 
-            # TODO(lucasagomes): Should be removed once the Mitaka
-            # release starts
-            if result == states.CLEANING:
-                LOG.warning(_LW('Returning CLEANING for asynchronous clean '
-                                'steps has been deprecated. Please use '
-                                'CLEANWAIT instead.'))
-                result = states.CLEANWAIT
-
             # Check if the step is done or not. The step should return
             # states.CLEANWAIT if the step is still being executed, or
             # None if the step is done.
@@ -1052,6 +1014,7 @@ class ConductorManager(base_manager.BaseConductorManager):
         # NOTE(rloo): No need to specify target prov. state; we're done
         task.process_event(event)
 
+    @task_manager.require_exclusive_lock
     def _do_node_verify(self, task):
         """Internal method to perform power credentials verification."""
         node = task.node
@@ -1083,6 +1046,7 @@ class ConductorManager(base_manager.BaseConductorManager):
             node.target_provision_state = None
             node.save()
 
+    @task_manager.require_exclusive_lock
     def _do_node_clean_abort(self, task, step_name=None):
         """Internal method to abort an ongoing operation.
 
@@ -1659,13 +1623,13 @@ class ConductorManager(base_manager.BaseConductorManager):
                 op = _('enabled') if enabled else _('disabled')
                 LOG.info(_LI("No console action was triggered because the "
                              "console is already %s"), op)
-                task.release_resources()
             else:
                 node.last_error = None
                 node.save()
                 task.spawn_after(self._spawn_worker,
                                  self._set_console_mode, task, enabled)
 
+    @task_manager.require_exclusive_lock
     def _set_console_mode(self, task, enabled):
         """Internal method to set console mode on a node."""
         node = task.node
@@ -2290,6 +2254,7 @@ def _store_configdrive(node, configdrive):
     node.instance_info = i_info
 
 
+@task_manager.require_exclusive_lock
 def do_node_deploy(task, conductor_id, configdrive=None):
     """Prepare the environment and deploy a node."""
     node = task.node
@@ -2499,6 +2464,7 @@ def do_sync_power_state(task, count):
     return count
 
 
+@task_manager.require_exclusive_lock
 def _do_inspect_hardware(task):
     """Initiates inspection.
 

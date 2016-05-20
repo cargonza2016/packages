@@ -49,28 +49,38 @@ from ironic import objects
 
 deploy_opts = [
     cfg.StrOpt('http_url',
-               help='ironic-conductor node\'s HTTP server URL. '
-                    'Example: http://192.1.2.3:8080',
-               deprecated_group='pxe'),
+               help=_("ironic-conductor node's HTTP server URL. "
+                      "Example: http://192.1.2.3:8080")),
     cfg.StrOpt('http_root',
                default='/httpboot',
-               help='ironic-conductor node\'s HTTP root path.',
-               deprecated_group='pxe'),
-    # TODO(rameshg87): Remove the deprecated names for the below two options in
-    # Mitaka release.
+               help=_("ironic-conductor node's HTTP root path.")),
     cfg.IntOpt('erase_devices_priority',
-               deprecated_name='agent_erase_devices_priority',
-               deprecated_group='agent',
                help=_('Priority to run in-band erase devices via the Ironic '
                       'Python Agent ramdisk. If unset, will use the priority '
                       'set in the ramdisk (defaults to 10 for the '
                       'GenericHardwareManager). If set to 0, will not run '
                       'during cleaning.')),
-    cfg.IntOpt('erase_devices_iterations',
-               deprecated_name='agent_erase_devices_iterations',
-               deprecated_group='agent',
+    # TODO(mmitchell): Remove the deprecated name/group during Ocata cycle.
+    cfg.IntOpt('shred_random_overwrite_iterations',
+               deprecated_name='erase_devices_iterations',
+               deprecated_group='deploy',
                default=1,
-               help=_('Number of iterations to be run for erasing devices.')),
+               min=0,
+               help=_('During shred, overwrite all block devices N times with '
+                      'random data. This is only used if a device could not '
+                      'be ATA Secure Erased. Defaults to 1.')),
+    cfg.BoolOpt('shred_final_overwrite_with_zeros',
+                default=True,
+                help=_("Whether to write zeros to a node's block devices "
+                       "after writing random data. This will write zeros to "
+                       "the device even when "
+                       "deploy.shred_random_overwrite_interations is 0. This "
+                       "option is only used if a device could not be ATA "
+                       "Secure Erased. Defaults to True.")),
+    cfg.BoolOpt('power_off_after_deploy_failure',
+                default=True,
+                help=_('Whether to power off a node after deploy failure. '
+                       'Defaults to True.')),
 ]
 CONF = cfg.CONF
 CONF.register_opts(deploy_opts, group='deploy')
@@ -98,6 +108,19 @@ SUPPORTED_CAPABILITIES = {
 }
 
 DISK_LAYOUT_PARAMS = ('root_gb', 'swap_mb', 'ephemeral_gb')
+
+
+def warn_about_unsafe_shred_parameters():
+    iterations = CONF.deploy.shred_random_overwrite_iterations
+    overwrite_with_zeros = CONF.deploy.shred_final_overwrite_with_zeros
+    if iterations == 0 and overwrite_with_zeros is False:
+        LOG.warning(_LW('With shred_random_overwrite_iterations set to 0 and '
+                        'shred_final_overwrite_with_zeros set to False, disks '
+                        'may NOT be shredded at all, unless they support ATA '
+                        'Secure Erase. This is a possible SECURITY ISSUE!'))
+
+
+warn_about_unsafe_shred_parameters()
 
 # All functions are called from deploy() directly or indirectly.
 # They are split for stub-out.
@@ -492,15 +515,15 @@ def set_failed_state(task, msg):
                 % {'node': node.uuid, 'state': node.provision_state})
         LOG.exception(msg2)
 
-    try:
-        manager_utils.node_power_action(task, states.POWER_OFF)
-    except Exception:
-        msg2 = (_LE('Node %s failed to power off while handling deploy '
-                    'failure. This may be a serious condition. Node '
-                    'should be removed from Ironic or put in maintenance '
-                    'mode until the problem is resolved.') % node.uuid)
-        LOG.exception(msg2)
-
+    if CONF.deploy.power_off_after_deploy_failure:
+        try:
+            manager_utils.node_power_action(task, states.POWER_OFF)
+        except Exception:
+            msg2 = (_LE('Node %s failed to power off while handling deploy '
+                        'failure. This may be a serious condition. Node '
+                        'should be removed from Ironic or put in maintenance '
+                        'mode until the problem is resolved.') % node.uuid)
+            LOG.exception(msg2)
     # NOTE(deva): node_power_action() erases node.last_error
     #             so we need to set it here.
     node.last_error = msg
@@ -623,7 +646,7 @@ def agent_execute_clean_step(task, step):
 
 
 def agent_add_clean_params(task):
-    """Add required config parameters to node's driver_interal_info.
+    """Add required config parameters to node's driver_internal_info.
 
     Adds the required conf options to node's driver_internal_info.
     It is Required to pass the information to IPA.
@@ -631,8 +654,12 @@ def agent_add_clean_params(task):
     :param task: a TaskManager instance.
     """
     info = task.node.driver_internal_info
-    passes = CONF.deploy.erase_devices_iterations
-    info['agent_erase_devices_iterations'] = passes
+
+    random_iterations = CONF.deploy.shred_random_overwrite_iterations
+    info['agent_erase_devices_iterations'] = random_iterations
+    zeroize = CONF.deploy.shred_final_overwrite_with_zeros
+    info['agent_erase_devices_zeroize'] = zeroize
+
     task.node.driver_internal_info = info
     task.node.save()
 

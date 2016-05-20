@@ -52,272 +52,6 @@ DRV_INFO_DICT = db_utils.get_test_pxe_driver_info()
 DRV_INTERNAL_INFO_DICT = db_utils.get_test_pxe_driver_internal_info()
 
 
-class IscsiDeployValidateParametersTestCase(db_base.DbTestCase):
-
-    def test_parse_instance_info_good(self):
-        # make sure we get back the expected things
-        node = obj_utils.create_test_node(
-            self.context, driver='fake_pxe',
-            instance_info=INST_INFO_DICT,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT
-        )
-        info = deploy_utils.parse_instance_info(node)
-        self.assertIsNotNone(info.get('image_source'))
-        self.assertIsNotNone(info.get('root_gb'))
-        self.assertEqual(0, info.get('ephemeral_gb'))
-        self.assertIsNone(info.get('configdrive'))
-
-    def test_parse_instance_info_missing_instance_source(self):
-        # make sure error is raised when info is missing
-        info = dict(INST_INFO_DICT)
-        del info['image_source']
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        self.assertRaises(exception.MissingParameterValue,
-                          deploy_utils.parse_instance_info,
-                          node)
-
-    def test_parse_instance_info_missing_root_gb(self):
-        # make sure error is raised when info is missing
-        info = dict(INST_INFO_DICT)
-        del info['root_gb']
-
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        self.assertRaises(exception.MissingParameterValue,
-                          deploy_utils.parse_instance_info,
-                          node)
-
-    def test_parse_instance_info_invalid_root_gb(self):
-        info = dict(INST_INFO_DICT)
-        info['root_gb'] = 'foobar'
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        self.assertRaises(exception.InvalidParameterValue,
-                          deploy_utils.parse_instance_info,
-                          node)
-
-    def test_parse_instance_info_valid_ephemeral_gb(self):
-        ephemeral_gb = 10
-        ephemeral_fmt = 'test-fmt'
-        info = dict(INST_INFO_DICT)
-        info['ephemeral_gb'] = ephemeral_gb
-        info['ephemeral_format'] = ephemeral_fmt
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        data = deploy_utils.parse_instance_info(node)
-        self.assertEqual(ephemeral_gb, data.get('ephemeral_gb'))
-        self.assertEqual(ephemeral_fmt, data.get('ephemeral_format'))
-
-    def test_parse_instance_info_unicode_swap_mb(self):
-        swap_mb = u'10'
-        swap_mb_int = 10
-        info = dict(INST_INFO_DICT)
-        info['swap_mb'] = swap_mb
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        data = deploy_utils.parse_instance_info(node)
-        self.assertEqual(swap_mb_int, data.get('swap_mb'))
-
-    def test_parse_instance_info_invalid_ephemeral_gb(self):
-        info = dict(INST_INFO_DICT)
-        info['ephemeral_gb'] = 'foobar'
-        info['ephemeral_format'] = 'exttest'
-
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        self.assertRaises(exception.InvalidParameterValue,
-                          deploy_utils.parse_instance_info,
-                          node)
-
-    def test_parse_instance_info_valid_ephemeral_missing_format(self):
-        ephemeral_gb = 10
-        ephemeral_fmt = 'test-fmt'
-        info = dict(INST_INFO_DICT)
-        info['ephemeral_gb'] = ephemeral_gb
-        info['ephemeral_format'] = None
-        self.config(default_ephemeral_format=ephemeral_fmt, group='pxe')
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        instance_info = deploy_utils.parse_instance_info(node)
-        self.assertEqual(ephemeral_fmt, instance_info['ephemeral_format'])
-
-    def test_parse_instance_info_valid_preserve_ephemeral_true(self):
-        info = dict(INST_INFO_DICT)
-        for opt in ['true', 'TRUE', 'True', 't',
-                    'on', 'yes', 'y', '1']:
-            info['preserve_ephemeral'] = opt
-
-            node = obj_utils.create_test_node(
-                self.context, uuid=uuidutils.generate_uuid(),
-                instance_info=info,
-                driver_internal_info=DRV_INTERNAL_INFO_DICT,
-            )
-            data = deploy_utils.parse_instance_info(node)
-            self.assertTrue(data.get('preserve_ephemeral'))
-
-    def test_parse_instance_info_valid_preserve_ephemeral_false(self):
-        info = dict(INST_INFO_DICT)
-        for opt in ['false', 'FALSE', 'False', 'f',
-                    'off', 'no', 'n', '0']:
-            info['preserve_ephemeral'] = opt
-            node = obj_utils.create_test_node(
-                self.context, uuid=uuidutils.generate_uuid(),
-                instance_info=info,
-                driver_internal_info=DRV_INTERNAL_INFO_DICT,
-            )
-            data = deploy_utils.parse_instance_info(node)
-            self.assertFalse(data.get('preserve_ephemeral'))
-
-    def test_parse_instance_info_invalid_preserve_ephemeral(self):
-        info = dict(INST_INFO_DICT)
-        info['preserve_ephemeral'] = 'foobar'
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        self.assertRaises(exception.InvalidParameterValue,
-                          deploy_utils.parse_instance_info,
-                          node)
-
-    def test_parse_instance_info_invalid_ephemeral_disk(self):
-        info = dict(INST_INFO_DICT)
-        info['ephemeral_gb'] = 10
-        info['swap_mb'] = 0
-        info['root_gb'] = 20
-        info['preserve_ephemeral'] = True
-        drv_internal_dict = {'instance': {'ephemeral_gb': 9,
-                                          'swap_mb': 0,
-                                          'root_gb': 20}}
-        drv_internal_dict.update(DRV_INTERNAL_INFO_DICT)
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=drv_internal_dict,
-        )
-        self.assertRaises(exception.InvalidParameterValue,
-                          deploy_utils.parse_instance_info,
-                          node)
-
-    def test__check_disk_layout_unchanged_fails(self):
-        info = dict(INST_INFO_DICT)
-        info['ephemeral_gb'] = 10
-        info['swap_mb'] = 0
-        info['root_gb'] = 20
-        info['preserve_ephemeral'] = True
-        drv_internal_dict = {'instance': {'ephemeral_gb': 20,
-                                          'swap_mb': 0,
-                                          'root_gb': 20}}
-        drv_internal_dict.update(DRV_INTERNAL_INFO_DICT)
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=drv_internal_dict,
-        )
-        self.assertRaises(exception.InvalidParameterValue,
-                          deploy_utils._check_disk_layout_unchanged,
-                          node, info)
-
-    def test__check_disk_layout_unchanged(self):
-        info = dict(INST_INFO_DICT)
-        info['ephemeral_gb'] = 10
-        info['swap_mb'] = 0
-        info['root_gb'] = 20
-        info['preserve_ephemeral'] = True
-        drv_internal_dict = {'instance': {'ephemeral_gb': 10,
-                                          'swap_mb': 0,
-                                          'root_gb': 20}}
-        drv_internal_dict.update(DRV_INTERNAL_INFO_DICT)
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=drv_internal_dict,
-        )
-        self.assertIsNone(deploy_utils._check_disk_layout_unchanged(node,
-                                                                    info))
-
-    def test__save_disk_layout(self):
-        info = dict(INST_INFO_DICT)
-        info['ephemeral_gb'] = 10
-        info['swap_mb'] = 0
-        info['root_gb'] = 10
-        info['preserve_ephemeral'] = False
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        iscsi_deploy._save_disk_layout(node, info)
-        node.refresh()
-        for param in ('ephemeral_gb', 'swap_mb', 'root_gb'):
-            self.assertEqual(
-                info[param], node.driver_internal_info['instance'][param]
-            )
-
-    def test_parse_instance_info_configdrive(self):
-        info = dict(INST_INFO_DICT)
-        info['configdrive'] = 'http://1.2.3.4/cd'
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        instance_info = deploy_utils.parse_instance_info(node)
-        self.assertEqual('http://1.2.3.4/cd', instance_info['configdrive'])
-
-    def test_parse_instance_info_nonglance_image(self):
-        info = INST_INFO_DICT.copy()
-        info['image_source'] = 'file:///image.qcow2'
-        info['kernel'] = 'file:///image.vmlinuz'
-        info['ramdisk'] = 'file:///image.initrd'
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        deploy_utils.parse_instance_info(node)
-
-    def test_parse_instance_info_nonglance_image_no_kernel(self):
-        info = INST_INFO_DICT.copy()
-        info['image_source'] = 'file:///image.qcow2'
-        info['ramdisk'] = 'file:///image.initrd'
-        node = obj_utils.create_test_node(
-            self.context, instance_info=info,
-            driver_internal_info=DRV_INTERNAL_INFO_DICT,
-        )
-        self.assertRaises(exception.MissingParameterValue,
-                          deploy_utils.parse_instance_info, node)
-
-    def test_parse_instance_info_whole_disk_image(self):
-        driver_internal_info = dict(DRV_INTERNAL_INFO_DICT)
-        driver_internal_info['is_whole_disk_image'] = True
-        node = obj_utils.create_test_node(
-            self.context, instance_info=INST_INFO_DICT,
-            driver_internal_info=driver_internal_info,
-        )
-        instance_info = deploy_utils.parse_instance_info(node)
-        self.assertIsNotNone(instance_info.get('image_source'))
-        self.assertIsNotNone(instance_info.get('root_gb'))
-        self.assertEqual(0, instance_info.get('swap_mb'))
-        self.assertEqual(0, instance_info.get('ephemeral_gb'))
-        self.assertIsNone(instance_info.get('configdrive'))
-
-    def test_parse_instance_info_whole_disk_image_missing_root(self):
-        info = dict(INST_INFO_DICT)
-        del info['root_gb']
-        node = obj_utils.create_test_node(self.context, instance_info=info)
-        self.assertRaises(exception.InvalidParameterValue,
-                          deploy_utils.parse_instance_info, node)
-
-
 class IscsiDeployPrivateMethodsTestCase(db_base.DbTestCase):
 
     def setUp(self):
@@ -330,6 +64,21 @@ class IscsiDeployPrivateMethodsTestCase(db_base.DbTestCase):
         }
         mgr_utils.mock_the_extension_manager(driver="fake_pxe")
         self.node = obj_utils.create_test_node(self.context, **n)
+
+    def test__save_disk_layout(self):
+        info = dict(INST_INFO_DICT)
+        info['ephemeral_gb'] = 10
+        info['swap_mb'] = 0
+        info['root_gb'] = 10
+        info['preserve_ephemeral'] = False
+        self.node.instance_info = info
+
+        iscsi_deploy._save_disk_layout(self.node, info)
+        self.node.refresh()
+        for param in ('ephemeral_gb', 'swap_mb', 'root_gb'):
+            self.assertEqual(
+                info[param], self.node.driver_internal_info['instance'][param]
+            )
 
     def test__get_image_dir_path(self):
         self.assertEqual(os.path.join(CONF.pxe.images_path,
@@ -425,6 +174,7 @@ class IscsiDeployMethodsTestCase(db_base.DbTestCase):
         expected_iqn = 'iqn.2008-10.org.openstack:%s' % self.node.uuid
         expected_opts = {
             'iscsi_target_iqn': expected_iqn,
+            'iscsi_portal_port': 3260,
             'deployment_id': self.node.uuid,
             'deployment_key': fake_key,
             'disk': fake_disk,
@@ -755,7 +505,8 @@ class IscsiDeployMethodsTestCase(db_base.DbTestCase):
     def test_do_agent_iscsi_deploy_okay(self, build_options_mock,
                                         continue_deploy_mock):
         build_options_mock.return_value = {'deployment_key': 'abcdef',
-                                           'iscsi_target_iqn': 'iqn-qweqwe'}
+                                           'iscsi_target_iqn': 'iqn-qweqwe',
+                                           'iscsi_portal_port': 3260}
         agent_client_mock = mock.MagicMock(spec_set=agent_client.AgentClient)
         agent_client_mock.start_iscsi_target.return_value = {
             'command_status': 'SUCCESS', 'command_error': None}
@@ -771,7 +522,7 @@ class IscsiDeployMethodsTestCase(db_base.DbTestCase):
                 task, agent_client_mock)
             build_options_mock.assert_called_once_with(task.node)
             agent_client_mock.start_iscsi_target.assert_called_once_with(
-                task.node, 'iqn-qweqwe')
+                task.node, 'iqn-qweqwe', 3260, wipe_disk_metadata=True)
             continue_deploy_mock.assert_called_once_with(
                 task, error=None, iqn='iqn-qweqwe', key='abcdef',
                 address='1.2.3.4')
@@ -780,12 +531,41 @@ class IscsiDeployMethodsTestCase(db_base.DbTestCase):
                 task.node.driver_internal_info['root_uuid_or_disk_id'])
             self.assertEqual(ret_val, uuid_dict_returned)
 
+    @mock.patch.object(iscsi_deploy, 'continue_deploy', autospec=True)
+    @mock.patch.object(iscsi_deploy, 'build_deploy_ramdisk_options',
+                       autospec=True)
+    def test_do_agent_iscsi_deploy_preserve_ephemeral(self, build_options_mock,
+                                                      continue_deploy_mock):
+        """Ensure the disk is not wiped if preserve_ephemeral is True."""
+        build_options_mock.return_value = {'deployment_key': 'abcdef',
+                                           'iscsi_target_iqn': 'iqn-qweqwe',
+                                           'iscsi_portal_port': 3260}
+        agent_client_mock = mock.MagicMock(spec_set=agent_client.AgentClient)
+        agent_client_mock.start_iscsi_target.return_value = {
+            'command_status': 'SUCCESS', 'command_error': None}
+        driver_internal_info = {
+            'agent_url': 'http://1.2.3.4:1234'}
+        self.node.driver_internal_info = driver_internal_info
+        self.node.save()
+        uuid_dict_returned = {'root uuid': 'some-root-uuid'}
+        continue_deploy_mock.return_value = uuid_dict_returned
+
+        with task_manager.acquire(self.context, self.node.uuid,
+                                  shared=False) as task:
+            task.node.instance_info['preserve_ephemeral'] = True
+            iscsi_deploy.do_agent_iscsi_deploy(
+                task, agent_client_mock)
+            build_options_mock.assert_called_once_with(task.node)
+            agent_client_mock.start_iscsi_target.assert_called_once_with(
+                task.node, 'iqn-qweqwe', 3260, wipe_disk_metadata=False)
+
     @mock.patch.object(iscsi_deploy, 'build_deploy_ramdisk_options',
                        autospec=True)
     def test_do_agent_iscsi_deploy_start_iscsi_failure(self,
                                                        build_options_mock):
         build_options_mock.return_value = {'deployment_key': 'abcdef',
-                                           'iscsi_target_iqn': 'iqn-qweqwe'}
+                                           'iscsi_target_iqn': 'iqn-qweqwe',
+                                           'iscsi_portal_port': 3260}
         agent_client_mock = mock.MagicMock(spec_set=agent_client.AgentClient)
         agent_client_mock.start_iscsi_target.return_value = {
             'command_status': 'FAILED', 'command_error': 'booom'}
@@ -800,7 +580,7 @@ class IscsiDeployMethodsTestCase(db_base.DbTestCase):
                               task, agent_client_mock)
             build_options_mock.assert_called_once_with(task.node)
             agent_client_mock.start_iscsi_target.assert_called_once_with(
-                task.node, 'iqn-qweqwe')
+                task.node, 'iqn-qweqwe', 3260, wipe_disk_metadata=True)
             self.node.refresh()
             self.assertEqual(states.DEPLOYFAIL, self.node.provision_state)
             self.assertEqual(states.ACTIVE, self.node.target_provision_state)

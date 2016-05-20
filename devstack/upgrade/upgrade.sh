@@ -41,7 +41,11 @@ source $TARGET_DEVSTACK_DIR/stackrc
 source $TARGET_DEVSTACK_DIR/lib/tls
 source $TARGET_DEVSTACK_DIR/lib/nova
 source $TARGET_DEVSTACK_DIR/lib/neutron-legacy
-source $TARGET_DEVSTACK_DIR/lib/ironic
+source $TARGET_DEVSTACK_DIR/lib/apache
+
+# Keep track of the DevStack directory
+IRONIC_DEVSTACK_DIR=$(dirname "$0")/..
+source $IRONIC_DEVSTACK_DIR/lib/ironic
 
 # Print the commands being run so that we can see the command that triggers
 # an error.  It is also useful for following allowing as the install occurs.
@@ -97,10 +101,10 @@ fi
 
 $IRONIC_BIN_DIR/ironic-dbsync --config-file=$IRONIC_CONF_FILE
 
-start_ironic
-
 # calls upgrade-ironic for specific release
 upgrade_project ironic $RUN_DIR $BASE_DEVSTACK_BRANCH $TARGET_DEVSTACK_BRANCH
+
+start_ironic
 
 # Don't succeed unless the services come up
 ensure_services_started ironic-api ironic-conductor

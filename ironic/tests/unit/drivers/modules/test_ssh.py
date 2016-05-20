@@ -156,16 +156,6 @@ class SSHValidateParametersTestCase(db_base.DbTestCase):
                           ssh._parse_driver_info,
                           node)
 
-    def test__normalize_mac_string(self):
-        mac_raw = "0A:1B-2C-3D:4F"
-        mac_clean = ssh._normalize_mac(mac_raw)
-        self.assertEqual("0a1b2c3d4f", mac_clean)
-
-    def test__normalize_mac_unicode(self):
-        mac_raw = u"0A:1B-2C-3D:4F"
-        mac_clean = ssh._normalize_mac(mac_raw)
-        self.assertEqual("0a1b2c3d4f", mac_clean)
-
     def test__parse_driver_info_with_custom_libvirt_uri(self):
         CONF.set_override('libvirt_uri', 'qemu:///foo', 'ssh')
         expected_base_cmd = "LC_ALL=C /usr/bin/virsh --connect qemu:///foo"
@@ -552,60 +542,6 @@ class SSHPrivateMethodsTestCase(db_base.DbTestCase):
         get_power_status_mock.assert_called_once_with(self.sshclient, info)
         get_hosts_name_mock.assert_called_once_with(self.sshclient, info)
         exec_ssh_mock.assert_called_once_with(self.sshclient, cmd_to_exec)
-
-    def test_exec_ssh_command_good(self):
-        class Channel(object):
-            def recv_exit_status(self):
-                return 0
-
-        class Stream(object):
-            def __init__(self, buffer=''):
-                self.buffer = buffer
-                self.channel = Channel()
-
-            def read(self):
-                return self.buffer
-
-            def close(self):
-                pass
-
-        with mock.patch.object(self.sshclient, 'exec_command',
-                               autospec=True) as exec_command_mock:
-            exec_command_mock.return_value = (Stream(),
-                                              Stream('hello'),
-                                              Stream())
-            stdout, stderr = processutils.ssh_execute(self.sshclient,
-                                                      "command")
-
-            self.assertEqual('hello', stdout)
-            exec_command_mock.assert_called_once_with("command")
-
-    def test_exec_ssh_command_fail(self):
-        class Channel(object):
-            def recv_exit_status(self):
-                return 127
-
-        class Stream(object):
-            def __init__(self, buffer=''):
-                self.buffer = buffer
-                self.channel = Channel()
-
-            def read(self):
-                return self.buffer
-
-            def close(self):
-                pass
-
-        with mock.patch.object(self.sshclient, 'exec_command',
-                               autospec=True) as exec_command_mock:
-            exec_command_mock.return_value = (Stream(),
-                                              Stream('hello'),
-                                              Stream())
-            self.assertRaises(processutils.ProcessExecutionError,
-                              processutils.ssh_execute,
-                              self.sshclient,
-                              "command")
-            exec_command_mock.assert_called_once_with("command")
 
 
 class SSHDriverTestCase(db_base.DbTestCase):

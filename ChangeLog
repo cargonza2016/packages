@@ -1,13 +1,144 @@
 CHANGES
 =======
 
+* Stop unit-testing processutils internals
+* Fix start order for Ironic during upgrade
+* Run smoke tests after upgrade
+* Add ironic to enabled_services
+* Remove link to Liberty configs
+* Updated from global requirements
+* Fix shutdown.sh & upgrade.sh for grenade
+* add mitaka configuration reference link to the index page
+* Remove verbose option
+* Updated from global requirements
+* Eliminate warnings about rm in api-ref build
+* Remove backward compat for Liberty cleaning
+* Remove [conductor]/clean_nodes config option
+* Remove "message" attribute support from IronicException
+* Setup for using the Grenade 'early_create' phase
+* Remove deprecated [pxe]/http_* options
+* Remove [agent]/manage_tftp option
+* Remove "discoverd" configuration group
+* Regenerate sample config
+* Doc: Replace nova image-list
+* Migrate to os-api-ref library
+* Add require_exclusive_lock decorators to conductor methods
+* Fix syntax error in devstack create-node script
+* Updated from global requirements
+* Fix formatting error in releasenotes
+* Allow vendor drivers to acquire shared locks
+* Modify doc for RAID clean steps in manual cleaning
+* Make iPXE + TinyIPA the defaults for devstack
+* Only install DIB if going to use DIB
+* Add some docs/comments to devstack/plugin.sh
+* devstack: Fetch tarball images via https
+* DevStack: Support to install virtualbmc from source
+* Regenerate sample configuration
+* Allow configuring shred's final overwrite with zeros
+* Updated from global requirements
+* Extend IRONIC_RAMDISK_TYPE to support 'dib'
+* Cleanup unused conf variables
+* Adds RAID interface for 'iscsi_ilo'
+* Pass environment through to create-node.sh
+* DevStack: Support to install pyghmi from source
+* RAID interface to support JBOD volumes
+* Remove ClusteredComputeManager docs
+* API: Check for reserved words when naming a node
+* File download fails with swift pseudo folder
+* Migrate api-ref into our tree
+* Updating dev-quickstart.rst file links
+* Devstack: allow extra PXE params
+* Updated from global requirements
+* Update resources only for specific node during deletion
+* Fix tox cover command
+* Fix VirtualBox cannot set boot device when powered on
+* Set root hints for disks less than 4Gb and IPA
+* Use Ironic node name for VM
+* Allow to sepecify VM disk format
+* Update compute_driver in documentation
+* Replace logging constants with oslo.log
+* iscsi: wipe the disk before deployment
+* FIX: IPMI bmc_reset() always executed as "warm"
+* Fix API node name updates
+* DevStack: Parametrize automated_clean
+* Very important single character typo fix
+* Remove two DEPRECATED config options from [agent]
+* Allow to set Neutron port setup delay from config
+* Update ironic.config.sample
+* Fix usage of rest_client expected_success() in tests
+* Fixed nits in the new inspection doc page
+* Imported Translations from Zanata
+* Updated from global requirements
+* Document how to run the tempest tests
+* Update the inspection documentation
+* ipxe: retry on failure
+* Add note on prerequisite of 'rpm' file extraction
+* Follow-up patch of 0607226fc4b4bc3c9e1738dc3f78ed99e5d4f13d
+* Devstack: Change to use 'ovs-vsctl get port tag'
+* Restart consoles on conductor startup
+* Remove backwards compat for CLEANING
+* Make sure Cisco drivers are documented on IRONIC_DEPLOY_DRIVER
+* Remove two deprecated config option names from [agent] section
+* Updated from global requirements
+* Add support for Cisco drivers in Ironic devstack
+* Updated from global requirements
+* [docstring] Update ironic/api/controllers/v1/__init__.py comment
+* add new portal_port option for iscsi module
+* Fix tinyipa initrd tarballs.openstack.org file name
+* Remove description of 'downgrade' for ironic-dbsync
+* In node_power_action() add node.UUID to log message
+* Rename juno name state modification method
+* Prepare for transition to oslo-config-generator
+* Updated from global requirements
+* Reduce amount of unhelpful debug logging in the API service
+* Correct api version check conditional for node.name
+* Updated from global requirements
+* Enable download of tinyipa prebuilt image
+* Follow-up to I244c3f31d0ad26194887cfb9b79f96b5111296c6
+* Use get_admin_context() to create the context object
+* Updated from global requirements
+* Don't power off non-deploying iLO nodes in takeover
+* deployment vmedia ops should not be run when not deploying
+* Fix NamedTemporaryFile() OSError Exception
+* Updated from global requirements
+* Fix _do_next_clean_step_fail_in_tear_down_cleaning()
+* Make tox respect upper-constraints.txt
+* Adopt Ironic's own context
+* Allow fetching IPA ramdisk with branch name
+* Tune interval for node provision state check
+* Fix typo in devstack script
+* Note on ilo firmware update swift url scheme
+* Force iRMC vmedia boot from remotely connected CD/DVD
+* Normalize MAC OctetString to fix InvalidMAC exception
+* Enable Grenade usage as a plugin
+* Readability fixes for cleaning_reboot code
+* Support reboot_requested bool on agent clean_steps
+* Update tempest compute flavor_ref/flavor_ref_alt
+* Move testcases related to parse_instance_info()
+* Improve check for ssh-key to include public and private files
+* Assign valid values to UUIDFields in unit tests
+* Fix typos in some source files
+* Follow up patch of 843ce0a16160f2e2710ef0901028453cd9a0357c
+* Clean up test node post data
+* Fix: Duplicated driver causes conductor to fail
+* Use trueorfalse function instead of specific value
+* Update reno for stable/mitaka
+* Doc update to enable HTTPS in Glance and Ironic comm
+* Fix race in hash ring refresh unit test
+* Addressing nits on I2984cd9d469622a65201fd9d50f964b144cce625
+* Config to stop powering off nodes on failure
+
 5.1.0
 -----
 
 * Documentation update for partition image support
+* Delete bridge "brbm" in devstack/unstack.sh
+* Remove unneeded use of task.release_resources()
+* [Devstack]Add ability to enable shellinabox SSL certificate
 * Append 'Openstack-Request-Id' header to the response
 * Add disk_label and node_uuid for agent drivers
 * Fix sphinx docs build
+* Update authorized_keys with new key only
 * Agent: Out-of-band power off on deploy
 * Document partition image support with agent_ilo
 * Add support for partition images in agent drivers
@@ -18,7 +149,10 @@ CHANGES
 * Removes redundant "to"
 * Install apparmor b/c Docker.io has undeclared dep
 * Don't depend on existing file perm for qemu hook
+* Move _normalize_mac to driver utils
 * Devstack: add check of chassis creating
+* Allow user to specify cleaning network
+* Update ironic_ssh_check method
 * Adds doc - firmware update(iLO) manual clean step
 * Add ensure_thread_contain_context() to task_manager
 * [devstack] Do not die if neutron is disabled
@@ -174,6 +308,7 @@ CHANGES
 * Update links to OpenStack manuals
 * Fix issue where system hostname can impact genconfig
 * Add choices option to several options
+* Add xinetd and its TFTP configuration in Install Guide
 * Reorganize the developer's main page
 * Document backwards compat for passthru methods
 * Drop MANIFEST.in - it's not needed pbr
@@ -181,6 +316,7 @@ CHANGES
 * Devstack: replace 'http' with SERVICE_PROTOCOL
 * Clarify rejected status in RFE contribution docs
 * Bring UP baremetal bridge
+* Adjust ipminative._reboot to comply with pyghmi contract
 * Document the process of proposing new features
 * Updated from global requirements
 * Use assertTrue/False instead of assertEqual(T/F)

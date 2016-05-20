@@ -32,7 +32,7 @@ Install prerequisites (for python 2.7):
 
   If using RHEL and yum reports "No package python-pip available" and "No
   package git-review available", use the EPEL software repository.
-  Instructions can be found at `<http://fedoraproject.org/wiki/EPEL/FAQ#howtouse>`_.
+  Instructions can be found at `<https://fedoraproject.org/wiki/EPEL/FAQ#howtouse>`_.
 
 - Fedora 22 or higher::
 
@@ -47,7 +47,7 @@ Install prerequisites (for python 2.7):
 
   Graphviz is only needed for generating the state machine diagram. To install it
   on openSUSE or SLE 12, see
-  `<http://software.opensuse.org/download.html?project=graphics&package=graphviz-plugins>`_.
+  `<https://software.opensuse.org/download.html?project=graphics&package=graphviz-plugins>`_.
 
 
 To use Python 3.4, follow the instructions above to install prerequisites and
@@ -213,9 +213,9 @@ At this point, you can continue to Step 2.
 Option 2: Vagrant, VirtualBox, and Ansible
 ##########################################
 
-This option requires `virtualbox <https://www.virtualbox.org//>`_,
-`vagrant <http://www.vagrantup.com/downloads>`_, and
-`ansible <http://www.ansible.com/home>`_. You may install these using your
+This option requires `virtualbox <https://www.virtualbox.org>`_,
+`vagrant <https://www.vagrantup.com>`_, and
+`ansible <https://www.ansible.com>`_. You may install these using your
 favorite package manager, or by downloading from the provided links.
 
 Next, run vagrant::
@@ -464,7 +464,7 @@ Source credentials, create a key, and spawn an instance::
     source ~/devstack/openrc
 
     # query the image id of the default cirros image
-    image=$(nova image-list | egrep "$DEFAULT_IMAGE_NAME"'[^-]' | awk '{ print $2 }')
+    image=$(openstack image show $DEFAULT_IMAGE_NAME -f value -c id)
 
     # create keypair
     ssh-keygen
@@ -546,6 +546,60 @@ The server should now be accessible via SSH::
 
     ssh cirros@10.1.0.4
     $
+
+=====================
+Running Tempest tests
+=====================
+
+After `Deploying Ironic with DevStack`_ one might want to run integration
+tests against the running cloud. The Tempest project is the project that
+offers an integration test suite for OpenStack.
+
+First, navigate to Tempest directory::
+
+  cd /opt/stack/tempest
+
+To run all tests from the `Ironic plugin
+<https://github.com/openstack/ironic/tree/master/ironic_tempest_plugin>`_,
+execute the following command::
+
+  tox -e all-plugin -- ironic
+
+To limit the amount of tests that you would like to run, you can use
+a regex. For instance, to limit the run to a single test file, the
+following command can be used::
+
+  tox -e all-plugin -- ironic_tempest_plugin.tests.scenario.test_baremetal_basic_ops
+
+
+Debugging Tempest tests
+-----------------------
+
+It is sometimes useful to step through the test code, line by line,
+especially when the error output is vague. This can be done by
+running the tests in debug mode and using a debugger such as `pdb
+<https://docs.python.org/2/library/pdb.html>`_.
+
+For example, after editing the *test_baremetal_basic_ops* file and
+setting up the pdb traces you can invoke the ``run_tempest.sh`` script
+in the Tempest directory with the following parameters::
+
+  ./run_tempest.sh -N -d ironic_tempest_plugin.tests.scenario.test_baremetal_basic_ops
+
+* The *-N* parameter tells the script to run the tests in the local
+  environment (without a virtualenv) so it can find the Ironic tempest
+  plugin.
+
+* The *-d* parameter enables the debug mode, allowing it to be used
+  with pdb.
+
+For more information about the supported parameters see::
+
+  ./run_tempest.sh --help
+
+.. note::
+   Always be careful when running debuggers in time sensitive code,
+   they may cause timeout errors that weren't there before.
 
 ================================
 Building developer documentation
