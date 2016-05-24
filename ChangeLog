@@ -1,6 +1,17 @@
 CHANGES
 =======
 
+* Updated from global requirements
+* Restart n-cpu after Ironic install
+* Move all cleanups to cleanup_ironic
+* Keep backward compatibility for openstack port create
+* Revert "Run smoke tests after upgrade"
+* Add some docs about firmware security
+* Update the api-ref documentation for Root and Nodes
+* Read the Sphinx html_last_updated_fmt option correctly in py3
+* devstack: Configure console device name
+* Updated from global requirements
+* Replace project clients calls with openstack client
 * Stop unit-testing processutils internals
 * Fix start order for Ironic during upgrade
 * Run smoke tests after upgrade
@@ -58,6 +69,7 @@ CHANGES
 * Update compute_driver in documentation
 * Replace logging constants with oslo.log
 * iscsi: wipe the disk before deployment
+* Joined 'tags' column while getting node
 * FIX: IPMI bmc_reset() always executed as "warm"
 * Fix API node name updates
 * DevStack: Parametrize automated_clean
