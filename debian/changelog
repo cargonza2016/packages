@@ -1,9 +1,13 @@
-ironic (1:5.1.1~dev243-0ubuntu1) UNRELEASED; urgency=medium
+ironic (1:5.1.1~dev265-0ubuntu1) UNRELEASED; urgency=medium
 
+  [ James Page ]
   * New upstream version.
   * d/p/*: Refresh.
 
- -- James Page <james.page@ubuntu.com>  Fri, 20 May 2016 10:17:18 +0100
+  [ Corey Bryant ]
+  * d/rules: Run tests with ostestr.
+
+ -- Corey Bryant <corey.bryant@canonical.com>  Tue, 24 May 2016 09:20:32 -0400
 
 ironic (1:5.1.0-0ubuntu1) xenial; urgency=medium
 
