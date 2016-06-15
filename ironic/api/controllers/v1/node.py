@@ -96,6 +96,16 @@ PROVISION_ACTION_STATES = (ir_states.VERBS['manage'],
                            ir_states.VERBS['provide'],
                            ir_states.VERBS['abort'])
 
+_NODES_CONTROLLER_RESERVED_WORDS = None
+
+
+def get_nodes_controller_reserved_names():
+    global _NODES_CONTROLLER_RESERVED_WORDS
+    if _NODES_CONTROLLER_RESERVED_WORDS is None:
+        _NODES_CONTROLLER_RESERVED_WORDS = (
+            api_utils.get_controller_reserved_names(NodesController))
+    return _NODES_CONTROLLER_RESERVED_WORDS
+
 
 def hide_fields_in_newer_versions(obj):
     # if requested version is < 1.3, hide driver_internal_info
@@ -924,6 +934,12 @@ class NodeMaintenanceController(rest.RestController):
 class NodesController(rest.RestController):
     """REST controller for Nodes."""
 
+    # NOTE(lucasagomes): For future reference. If we happen
+    # to need to add another sub-controller in this class let's
+    # try to make it a parameter instead of an endpoint due
+    # https://bugs.launchpad.net/ironic/+bug/1572651, e.g, instead of
+    # v1/nodes/(ident)/detail we could have v1/nodes/(ident)?detail=True
+
     states = NodeStatesController()
     """Expose the state controller action as a sub-element of nodes"""
 
@@ -1033,8 +1049,7 @@ class NodesController(rest.RestController):
         if not api_utils.allow_node_logical_names():
             raise exception.NotAcceptable()
 
-        reserved_names = api_utils.get_controller_reserved_names(
-            NodesController)
+        reserved_names = get_nodes_controller_reserved_names()
         for name in names:
             if not api_utils.is_valid_node_name(name):
                 raise wsme.exc.ClientSideError(
@@ -1043,7 +1058,7 @@ class NodesController(rest.RestController):
             if name in reserved_names:
                 raise wsme.exc.ClientSideError(
                     'The word "%(name)s" is reserved and can not be used as a '
-                    'node name. Other reserved words are: %(reserved)s' %
+                    'node name. Reserved words are: %(reserved)s.' %
                     {'name': name,
                      'reserved': ', '.join(reserved_names)},
                     status_code=http_client.BAD_REQUEST)
@@ -1153,7 +1168,7 @@ class NodesController(rest.RestController):
         # /detail should only work against collections
         parent = pecan.request.path.split('/')[:-1][-1]
         if parent != "nodes":
-            raise exception.HTTPNotFound
+            raise exception.HTTPNotFound()
 
         resource_url = '/'.join(['nodes', 'detail'])
         return self._get_nodes_collection(chassis_uuid, instance_uuid,
@@ -1194,7 +1209,7 @@ class NodesController(rest.RestController):
             of the resource to be returned.
         """
         if self.from_chassis:
-            raise exception.OperationNotPermitted
+            raise exception.OperationNotPermitted()
 
         api_utils.check_allow_specify_fields(fields)
 
@@ -1208,7 +1223,7 @@ class NodesController(rest.RestController):
         :param node: a node within the request body.
         """
         if self.from_chassis:
-            raise exception.OperationNotPermitted
+            raise exception.OperationNotPermitted()
 
         # NOTE(deva): get_topic_for checks if node.driver is in the hash ring
         #             and raises NoValidHost if it is not.
@@ -1247,7 +1262,7 @@ class NodesController(rest.RestController):
         :param patch: a json PATCH document to apply to this node.
         """
         if self.from_chassis:
-            raise exception.OperationNotPermitted
+            raise exception.OperationNotPermitted()
 
         rpc_node = api_utils.get_rpc_node(node_ident)
 
@@ -1318,7 +1333,7 @@ class NodesController(rest.RestController):
         :param node_ident: UUID or logical name of a node.
         """
         if self.from_chassis:
-            raise exception.OperationNotPermitted
+            raise exception.OperationNotPermitted()
 
         rpc_node = api_utils.get_rpc_node(node_ident)
 

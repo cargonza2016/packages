@@ -1003,8 +1003,9 @@ class ConductorManager(base_manager.BaseConductorManager):
         try:
             task.driver.deploy.tear_down_cleaning(task)
         except Exception as e:
-            msg = (_('Failed to tear down from cleaning for node %s')
-                   % node.uuid)
+            msg = (_('Failed to tear down from cleaning for node %(node)s, '
+                     'reason: %(err)s')
+                   % {'node': node.uuid, 'err': e})
             LOG.exception(msg)
             return utils.cleaning_error_handler(task, msg,
                                                 tear_down_cleaning=False)
@@ -1355,13 +1356,10 @@ class ConductorManager(base_manager.BaseConductorManager):
                    'provision_state': states.CLEANWAIT,
                    'maintenance': False,
                    'provisioned_before': callback_timeout}
-        last_error = _("Timeout reached while cleaning the node. Please "
-                       "check if the ramdisk responsible for the cleaning is "
-                       "running on the node.")
         self._fail_if_in_state(context, filters, states.CLEANWAIT,
                                'provision_updated_at',
-                               last_error=last_error,
-                               keep_target_state=True)
+                               keep_target_state=True,
+                               callback_method=utils.cleanup_cleanwait_timeout)
 
     @periodics.periodic(spacing=CONF.conductor.sync_local_state_interval)
     def _sync_local_state(self, context):
@@ -1726,7 +1724,9 @@ class ConductorManager(base_manager.BaseConductorManager):
 
     @messaging.expected_exceptions(exception.NodeLocked,
                                    exception.FailedToUpdateMacOnPort,
-                                   exception.PortgroupMACAlreadyExists)
+                                   exception.PortgroupMACAlreadyExists,
+                                   exception.PortgroupNotEmpty,
+                                   exception.InvalidState)
     def update_portgroup(self, context, portgroup_obj):
         """Update a portgroup.
 
@@ -1737,6 +1737,11 @@ class ConductorManager(base_manager.BaseConductorManager):
                  failed.
         :raises: PortgroupMACAlreadyExists if the update is setting a MAC which
                  is registered on another portgroup already.
+        :raises: InvalidState if portgroup-node association is updated while
+                 node not in a MANAGEABLE or ENROLL or INSPECTING state or not
+                 in MAINTENANCE mode.
+        :raises: PortgroupNotEmpty if there are ports associated with this
+                 portgroup.
         """
         portgroup_uuid = portgroup_obj.uuid
         LOG.debug("RPC update_portgroup called for portgroup %s.",
@@ -1746,6 +1751,40 @@ class ConductorManager(base_manager.BaseConductorManager):
                                   portgroup_obj.node_id,
                                   purpose=lock_purpose) as task:
             node = task.node
+
+            if 'node_id' in portgroup_obj.obj_what_changed():
+                # NOTE(zhenguo): If portgroup update is modifying the
+                # portgroup-node association then node should be in
+                # MANAGEABLE/INSPECTING/ENROLL provisioning state or in
+                # maintenance mode, otherwise InvalidState is raised.
+                allowed_update_states = [states.ENROLL,
+                                         states.INSPECTING,
+                                         states.MANAGEABLE]
+                if (node.provision_state not in allowed_update_states
+                    and not node.maintenance):
+                    action = _("Portgroup %(portgroup)s can not be associated "
+                               "to node %(node)s unless the node is in a "
+                               "%(allowed)s state or in maintenance mode.")
+
+                    raise exception.InvalidState(
+                        action % {'portgroup': portgroup_uuid,
+                                  'node': node.uuid,
+                                  'allowed': ', '.join(allowed_update_states)})
+
+                # NOTE(zhenguo): If portgroup update is modifying the
+                # portgroup-node association then there should not be
+                # any Port associated to the PortGroup, otherwise
+                # PortgroupNotEmpty exception is raised.
+                associated_ports = self.dbapi.get_ports_by_portgroup_id(
+                    portgroup_uuid)
+                if associated_ports:
+                    action = _("Portgroup %(portgroup)s can not be associated "
+                               "with node %(node)s because there are ports "
+                               "associated with this portgroup.")
+                    raise exception.PortgroupNotEmpty(
+                        action % {'portgroup': portgroup_uuid,
+                                  'node': node.uuid})
+
             if 'address' in portgroup_obj.obj_what_changed():
                 vif = portgroup_obj.extra.get('vif_portgroup_id')
                 if vif:
