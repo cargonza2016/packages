@@ -115,8 +115,8 @@ method_name:
 # variables in the node query string
 r_associated:
   description: |
-    Filter the list of returned nodes and only return which are, or are not,
-    associated with an ``instance_uuid``.
+    Filter the list of returned nodes and only return those which are, or are
+    not, associated with an ``instance_uuid``.
   in: query
   required: false
   type: boolean
@@ -141,6 +141,28 @@ r_maintenance:
   in: query
   required: false
   type: boolean
+r_port_address:
+  description: |
+    Filter the list of returned Ports, and only return the ones with the
+    specified physical hardware address, typically MAC, or an empty set if not
+    found.
+  in: query
+  required: false
+  type: string
+r_port_node_ident:
+  description: |
+    Filter the list of returned Ports, and only return the ones associated
+    with this specific node (name or UUID), or an empty set if not found.
+  in: query
+  required: false
+  type: string
+r_port_node_uuid:
+  description: |
+    Filter the list of returned Ports, and only return the ones associated
+    with this specific node UUID, or an empty set if not found.
+  in: query
+  required: false
+  type: string
 r_provision_state:
   description: |
     Filter the list of returned nodes, and only return those with the specified
@@ -172,7 +194,7 @@ sort_key:
   type: string
 
 
-# variables in API response body
+# variables in the API response body
 boot_device:
   description: |
     The boot device for a Node, eg. "pxe" or "disk".
@@ -222,19 +244,8 @@ console_enabled:
   type: boolean
 created_at:
   description: |
-    The date and time when the resource was created.
-
-    The date and time stamp format is `ISO 8601
-    <https://en.wikipedia.org/wiki/ISO_8601>`_:
-
-    ::
-
-       CCYY-MM-DDThh:mm:ss±hh:mm
-
-    For example, ``2015-08-27T09:49:58-05:00``.
-
-    The ``±hh:mm`` value, if included, is the time zone as an offset
-    from UTC.
+    The UTC date and time when the resource was created,
+    `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ format.
   in: body
   required: true
   type: string
@@ -263,9 +274,15 @@ driver_name:
   in: body
   required: true
   type: string
+driver_property_links:
+  description: |
+    A list of links to driver properties. Added in API microversion 1.14.
+  in: body
+  required: true
+  type: array
 drivers:
   description: |
-    A list of ``drivers`` objects.
+    A list of driver objects.
   in: body
   required: true
   type: array
@@ -274,7 +291,7 @@ extra:
     A set of one or more arbitrary metadata key and
     value pairs.
   in: body
-  required: false
+  required: true
   type: object
 hosts:
   description: |
@@ -290,15 +307,17 @@ id:
   type: string
 inspection_finished_at:
   description: |
-    The date and time when the inspection process started.
-    May be "null"
+    The UTC date and time when the resource was created,
+    `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ format.
+    May be "null".
   in: body
   required: true
   type: string
 inspection_started_at:
   description: |
-    The date and time when the inspection process started.
-    May be "null"
+    The UTC date and time when the resource was created,
+    `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ format.
+    May be "null".
   in: body
   required: true
   type: string
@@ -382,7 +401,7 @@ node_name:
   type: string
 node_uuid:
   description: |
-    UUID of the Node resource.
+    UUID of the Node this resource belongs to.
   in: body
   required: true
   type: string
@@ -393,6 +412,32 @@ nodes:
   in: body
   required: true
   type: array
+passthru_async:
+  description: |
+    If True the passthru function is invoked asynchronously; if False,
+    synchronously.
+  in: body
+  required: true
+  type: boolean
+passthru_attach:
+  description: |
+    True if the return value will be attached to the response object, and False
+    if the return value will be returned in the response body.
+  in: body
+  required: true
+  type: boolean
+passthru_description:
+  description: |
+    A description of what the method does, including any method parameters.
+  in: body
+  required: true
+  type: string
+passthru_http_methods:
+  description: |
+    A list of HTTP methods supported by the vendor function.
+  in: body
+  required: true
+  type: array
 persistent:
   description: |
     Whether the boot device should be set only for the next reboot, or
@@ -400,6 +445,19 @@ persistent:
   in: body
   required: true
   type: boolean
+port_address:
+  description: |
+    Physical hardware address of this network Port, typically the hardware
+    MAC address.
+  in: body
+  required: true
+  type: string
+ports:
+  description: |
+    A collection of Port resources.
+  in: body
+  required: true
+  type: array
 power_state:
   description: |
     The current power state of this Node. Usually, "power on" or "power off", but may be "None"
@@ -421,7 +479,8 @@ provision_state:
   type: string
 provision_updated_at:
   description: |
-    The date and time when the provision_state last changed.
+    The UTC date and time when the resource was created,
+    `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ format.
     ``null`` if the node is not being provisioned.
   in: body
   required: true
@@ -492,22 +551,9 @@ target_raid_config:
   type: JSON
 updated_at:
   description: |
-    The date and time when the resource was updated.
-
-    The date and time stamp format is `ISO 8601
-    <https://en.wikipedia.org/wiki/ISO_8601>`_:
-
-    ::
-
-       CCYY-MM-DDThh:mm:ss±hh:mm
-
-    For example, ``2015-08-27T09:49:58-05:00``.
-
-    The ``±hh:mm`` value, if included, is the time zone as an offset
-    from UTC. In the previous example, the offset value is ``-05:00``.
-
-    If the ``updated_at`` date and time stamp is not set, its value is
-    ``null``.
+    The UTC date and time when the resource was updated,
+    `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ format.
+    May be "null".
   in: body
   required: true
   type: string

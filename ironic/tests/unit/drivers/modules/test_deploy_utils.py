@@ -38,7 +38,6 @@ from ironic.conductor import utils as manager_utils
 from ironic.drivers.modules import agent_client
 from ironic.drivers.modules import deploy_utils as utils
 from ironic.drivers.modules import image_cache
-from ironic.drivers.modules import iscsi_deploy
 from ironic.drivers.modules import pxe
 from ironic.tests import base as tests_base
 from ironic.tests.unit.conductor import mgr_utils
@@ -357,7 +356,7 @@ class PhysicalWorkTestCase(tests_base.TestCase):
         root_uuid = '12345678-1234-1234-12345678-12345678abcdef'
 
         utils_name_list = ['get_dev', 'discovery', 'login_iscsi',
-                           'logout_iscsi', 'delete_iscsi', 'notify']
+                           'logout_iscsi', 'delete_iscsi']
 
         disk_utils_name_list = ['is_block_device', 'get_image_mb',
                                 'make_partitions', 'populate_image', 'mkfs',
@@ -501,7 +500,7 @@ class PhysicalWorkTestCase(tests_base.TestCase):
         efi_system_part_uuid = '9036-482'
 
         utils_name_list = ['get_dev', 'discovery', 'login_iscsi',
-                           'logout_iscsi', 'delete_iscsi', 'notify']
+                           'logout_iscsi', 'delete_iscsi']
 
         disk_utils_name_list = ['get_image_mb', 'make_partitions',
                                 'is_block_device', 'populate_image', 'mkfs',
@@ -592,7 +591,7 @@ class PhysicalWorkTestCase(tests_base.TestCase):
         root_uuid = '12345678-1234-1234-12345678-12345678abcdef'
 
         utils_name_list = ['get_dev', 'discovery', 'login_iscsi',
-                           'notify', 'logout_iscsi', 'delete_iscsi']
+                           'logout_iscsi', 'delete_iscsi']
 
         disk_utils_name_list = ['make_partitions', 'get_image_mb',
                                 'is_block_device', 'populate_image',
@@ -661,7 +660,7 @@ class PhysicalWorkTestCase(tests_base.TestCase):
         root_uuid = '12345678-1234-1234-12345678-12345678abcdef'
 
         utils_name_list = ['get_dev', 'discovery', 'login_iscsi',
-                           'logout_iscsi', 'delete_iscsi', 'notify']
+                           'logout_iscsi', 'delete_iscsi']
 
         disk_utils_name_list = ['get_image_mb', 'make_partitions',
                                 'is_block_device', 'populate_image', 'mkfs',
@@ -742,7 +741,7 @@ class PhysicalWorkTestCase(tests_base.TestCase):
         root_uuid = '12345678-1234-1234-12345678-12345678abcdef'
 
         utils_name_list = ['get_dev', 'discovery', 'login_iscsi',
-                           'delete_iscsi', 'logout_iscsi', 'notify']
+                           'delete_iscsi', 'logout_iscsi']
         disk_utils_name_list = ['make_partitions', 'get_image_mb',
                                 'is_block_device', 'populate_image', 'mkfs',
                                 'block_uuid', 'get_dev_block_size']
@@ -817,7 +816,7 @@ class PhysicalWorkTestCase(tests_base.TestCase):
         root_uuid = '12345678-1234-1234-12345678-12345678abcdef'
 
         utils_name_list = ['get_dev', 'discovery', 'login_iscsi',
-                           'logout_iscsi', 'delete_iscsi', 'notify']
+                           'logout_iscsi', 'delete_iscsi']
         disk_utils_name_list = ['is_block_device', 'populate_image',
                                 'get_image_mb', 'destroy_disk_metadata', 'dd',
                                 'block_uuid', 'make_partitions',
@@ -886,7 +885,7 @@ class PhysicalWorkTestCase(tests_base.TestCase):
 
         dev = '/dev/fake'
         utils_name_list = ['get_dev', 'discovery', 'login_iscsi',
-                           'logout_iscsi', 'delete_iscsi', 'notify']
+                           'logout_iscsi', 'delete_iscsi']
         disk_utils_name_list = ['is_block_device', 'populate_image']
 
         utils_mock = self._mock_calls(utils_name_list, utils)
@@ -1715,13 +1714,17 @@ class AgentMethodsTestCase(db_base.DbTestCase):
         cfg.CONF.set_override('shred_random_overwrite_iterations', 2, 'deploy')
         cfg.CONF.set_override('shred_final_overwrite_with_zeros', False,
                               'deploy')
+        cfg.CONF.set_override('continue_if_disk_secure_erase_fails', True,
+                              'deploy')
         with task_manager.acquire(
                 self.context, self.node.uuid, shared=False) as task:
             utils.agent_add_clean_params(task)
-            self.assertEqual(2, task.node.driver_internal_info.get(
-                'agent_erase_devices_iterations'))
-            self.assertEqual(False, task.node.driver_internal_info.get(
-                'agent_erase_devices_zeroize'))
+            self.assertEqual(2, task.node.driver_internal_info[
+                'agent_erase_devices_iterations'])
+            self.assertEqual(False, task.node.driver_internal_info[
+                'agent_erase_devices_zeroize'])
+            self.assertEqual(True, task.node.driver_internal_info[
+                'agent_continue_if_ata_erase_failed'])
 
     @mock.patch('ironic.dhcp.neutron.NeutronDHCPApi.delete_cleaning_ports',
                 autospec=True)
@@ -1768,16 +1771,13 @@ class AgentMethodsTestCase(db_base.DbTestCase):
 
     @mock.patch.object(pxe.PXEBoot, 'prepare_ramdisk', autospec=True)
     @mock.patch('ironic.conductor.utils.node_power_action', autospec=True)
-    @mock.patch.object(iscsi_deploy, 'build_deploy_ramdisk_options',
-                       autospec=True)
     @mock.patch.object(utils, 'build_agent_options', autospec=True)
     @mock.patch.object(utils, 'prepare_cleaning_ports', autospec=True)
     def _test_prepare_inband_cleaning(
-            self, prepare_cleaning_ports_mock, iscsi_build_options_mock,
+            self, prepare_cleaning_ports_mock,
             build_options_mock, power_mock, prepare_ramdisk_mock,
             manage_boot=True):
         build_options_mock.return_value = {'a': 'b'}
-        iscsi_build_options_mock.return_value = {'c': 'd'}
         with task_manager.acquire(
                 self.context, self.node.uuid, shared=False) as task:
             self.assertEqual(
@@ -1785,13 +1785,13 @@ class AgentMethodsTestCase(db_base.DbTestCase):
                 utils.prepare_inband_cleaning(task, manage_boot=manage_boot))
             prepare_cleaning_ports_mock.assert_called_once_with(task)
             power_mock.assert_called_once_with(task, states.REBOOT)
-            self.assertEqual(1, task.node.driver_internal_info.get(
-                             'agent_erase_devices_iterations'))
-            self.assertEqual(True, task.node.driver_internal_info.get(
-                             'agent_erase_devices_zeroize'))
+            self.assertEqual(1, task.node.driver_internal_info[
+                             'agent_erase_devices_iterations'])
+            self.assertEqual(True, task.node.driver_internal_info[
+                             'agent_erase_devices_zeroize'])
             if manage_boot:
                 prepare_ramdisk_mock.assert_called_once_with(
-                    mock.ANY, mock.ANY, {'a': 'b', 'c': 'd'})
+                    mock.ANY, mock.ANY, {'a': 'b'})
                 build_options_mock.assert_called_once_with(task.node)
             else:
                 self.assertFalse(prepare_ramdisk_mock.called)
@@ -2018,7 +2018,7 @@ class ValidateParametersTestCase(db_base.DbTestCase):
         )
 
         info = utils.get_image_instance_info(node)
-        self.assertIsNotNone(info.get('image_source'))
+        self.assertIsNotNone(info['image_source'])
         return info
 
     def test__get_img_instance_info_good(self):
@@ -2032,8 +2032,8 @@ class ValidateParametersTestCase(db_base.DbTestCase):
 
         info = self._test__get_img_instance_info(instance_info=instance_info)
 
-        self.assertIsNotNone(info.get('ramdisk'))
-        self.assertIsNotNone(info.get('kernel'))
+        self.assertIsNotNone(info['ramdisk'])
+        self.assertIsNotNone(info['kernel'])
 
     def test__get_img_instance_info_non_glance_image_missing_kernel(self):
         instance_info = INST_INFO_DICT.copy()
@@ -2082,10 +2082,10 @@ class InstanceInfoTestCase(db_base.DbTestCase):
             driver_internal_info=DRV_INTERNAL_INFO_DICT
         )
         info = utils.parse_instance_info(node)
-        self.assertIsNotNone(info.get('image_source'))
-        self.assertIsNotNone(info.get('root_gb'))
-        self.assertEqual(0, info.get('ephemeral_gb'))
-        self.assertIsNone(info.get('configdrive'))
+        self.assertIsNotNone(info['image_source'])
+        self.assertIsNotNone(info['root_gb'])
+        self.assertEqual(0, info['ephemeral_gb'])
+        self.assertIsNone(info['configdrive'])
 
     def test_parse_instance_info_missing_instance_source(self):
         # make sure error is raised when info is missing
@@ -2134,8 +2134,8 @@ class InstanceInfoTestCase(db_base.DbTestCase):
             driver_internal_info=DRV_INTERNAL_INFO_DICT,
         )
         data = utils.parse_instance_info(node)
-        self.assertEqual(ephemeral_gb, data.get('ephemeral_gb'))
-        self.assertEqual(ephemeral_fmt, data.get('ephemeral_format'))
+        self.assertEqual(ephemeral_gb, data['ephemeral_gb'])
+        self.assertEqual(ephemeral_fmt, data['ephemeral_format'])
 
     def test_parse_instance_info_unicode_swap_mb(self):
         swap_mb = u'10'
@@ -2147,7 +2147,7 @@ class InstanceInfoTestCase(db_base.DbTestCase):
             driver_internal_info=DRV_INTERNAL_INFO_DICT,
         )
         data = utils.parse_instance_info(node)
-        self.assertEqual(swap_mb_int, data.get('swap_mb'))
+        self.assertEqual(swap_mb_int, data['swap_mb'])
 
     def test_parse_instance_info_invalid_ephemeral_gb(self):
         info = dict(INST_INFO_DICT)
@@ -2188,7 +2188,7 @@ class InstanceInfoTestCase(db_base.DbTestCase):
                 driver_internal_info=DRV_INTERNAL_INFO_DICT,
             )
             data = utils.parse_instance_info(node)
-            self.assertTrue(data.get('preserve_ephemeral'))
+            self.assertTrue(data['preserve_ephemeral'])
 
     def test_parse_instance_info_valid_preserve_ephemeral_false(self):
         info = dict(INST_INFO_DICT)
@@ -2201,7 +2201,7 @@ class InstanceInfoTestCase(db_base.DbTestCase):
                 driver_internal_info=DRV_INTERNAL_INFO_DICT,
             )
             data = utils.parse_instance_info(node)
-            self.assertFalse(data.get('preserve_ephemeral'))
+            self.assertFalse(data['preserve_ephemeral'])
 
     def test_parse_instance_info_invalid_preserve_ephemeral(self):
         info = dict(INST_INFO_DICT)
@@ -2307,11 +2307,11 @@ class InstanceInfoTestCase(db_base.DbTestCase):
             driver_internal_info=driver_internal_info,
         )
         instance_info = utils.parse_instance_info(node)
-        self.assertIsNotNone(instance_info.get('image_source'))
-        self.assertIsNotNone(instance_info.get('root_gb'))
-        self.assertEqual(0, instance_info.get('swap_mb'))
-        self.assertEqual(0, instance_info.get('ephemeral_gb'))
-        self.assertIsNone(instance_info.get('configdrive'))
+        self.assertIsNotNone(instance_info['image_source'])
+        self.assertIsNotNone(instance_info['root_gb'])
+        self.assertEqual(0, instance_info['swap_mb'])
+        self.assertEqual(0, instance_info['ephemeral_gb'])
+        self.assertIsNone(instance_info['configdrive'])
 
     def test_parse_instance_info_whole_disk_image_missing_root(self):
         info = dict(INST_INFO_DICT)

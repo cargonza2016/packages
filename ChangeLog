@@ -1,12 +1,68 @@
 CHANGES
 =======
 
+* Document support for APC AP7921
+* Updated from global requirements
+* Add cleanwait timeout cleanup process
+* Add restrictions for changing portgroup-node association
+* Imported Translations from Zanata
+* Support for APC AP7922
+* fix sed strings in developer doc
+* Replace dict.get(key) with dict[key] in unit tests
+* Fix JSON error in documentation
+* Remove support for the old ramdisk (DIB deploy-ironic element)
+* Updated from global requirements
+* Document packing and unpacking the deploy ramdisk
+* Fix nits related to Ports api-ref
+* Gracefully degrade start_iscsi_target for Mitaka ramdisk
+* Update the api-ref documentation for Drivers
+* Update comment from NOTE to TODO
+* Update resources subnet CIDR
+* remove neutron stuff from devstack deb packages
+* Keep original error message when cleaning tear down fails
+* Add config option for ATA erase fallback in agent
+* Fix markup in documentation
+* Imported Translations from Zanata
+* Updated from global requirements
+* Add debug environment to tox
+* Correct RAID documentation JSON
+* Added ironic-ui horizon dashboard plugin to ironic docs
+* Updated from global requirements
+* Disable disk_config compute-feature-enabled in tempest
+* Make sure create_ovs_taps creates unique taps
+* NOTIFICATION_TRANSPORT should be global
+* Remove links to github for OpenStack things
+* Update the api-ref documentation for Ports
+* Add one use case for configdrive
+* Updated from global requirements
+* Remove hard-coded keystone version from setup
+* Use a single uuid parameter in api-ref
+* Use correct iscsi portal port in continue_deploy
+* Fix raises to raise an instance of a class
+* Fix formatting of a release note
+* Remove support for 'hexraw' iPXE type
+* Use messaging notifications transport instead of default
+* Updated from global requirements
+* tempest: start using get_configured_admin_credentials
+* Fix signature for request method
+* Remove backward compatibility code for agent url
+* Add 'How to get a decision on something' to FAQ
+* Follow-up patch of 8e5e69869df476788b3ccf7e5ba6c2210a98fc8a
+* Introduce provision states: AVAILABLE, ENROLL
+* minor changes to security documentation
+* Add support for API microversions in Tempest tests
+* Make use of oslo-config-generator
+* Mention RFEs in README
+* Make the ssh driver work on headless VirtualBox machines
+* Allow to specify node arch
+* Remove unused is_valid_cidr method
 * Updated from global requirements
 * Restart n-cpu after Ironic install
 * Move all cleanups to cleanup_ironic
 * Keep backward compatibility for openstack port create
 * Revert "Run smoke tests after upgrade"
 * Add some docs about firmware security
+* Change HTTP_SERVER's default value to TFTPSERVER_IP
 * Update the api-ref documentation for Root and Nodes
 * Read the Sphinx html_last_updated_fmt option correctly in py3
 * devstack: Configure console device name
@@ -20,13 +76,16 @@ CHANGES
 * Updated from global requirements
 * Fix shutdown.sh & upgrade.sh for grenade
 * add mitaka configuration reference link to the index page
+* Remove "periodic_interval" config option
 * Remove verbose option
 * Updated from global requirements
 * Eliminate warnings about rm in api-ref build
+* Remove deprecated driver_periodic_task
 * Remove backward compat for Liberty cleaning
 * Remove [conductor]/clean_nodes config option
 * Remove "message" attribute support from IronicException
 * Setup for using the Grenade 'early_create' phase
+* Add support for dib based agent ramdisk in lib/ironic
 * Remove deprecated [pxe]/http_* options
 * Remove [agent]/manage_tftp option
 * Remove "discoverd" configuration group

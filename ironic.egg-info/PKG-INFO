@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: ironic
-Version: 5.1.1.dev265
+Version: 5.1.1.dev373
 Summary: OpenStack Bare Metal Provisioning
 Home-page: http://docs.openstack.org/developer/ironic/
 Author: OpenStack
@@ -27,7 +27,8 @@ Description: Ironic
         * Bugs: http://bugs.launchpad.net/ironic
         * Wiki: https://wiki.openstack.org/wiki/Ironic
         
-        Project status, bugs, and blueprints are tracked on Launchpad:
+        Project status, bugs and RFEs (requests for feature enhancements)
+        are tracked on Launchpad:
         
           http://launchpad.net/ironic
         

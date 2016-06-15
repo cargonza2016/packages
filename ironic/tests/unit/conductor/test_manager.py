@@ -1100,7 +1100,13 @@ class DoNodeDeployTearDownTestCase(mgr_utils.ServiceSetUpMixin,
             self.context, driver='fake',
             provision_state=states.CLEANWAIT,
             target_provision_state=tgt_prov_state,
-            provision_updated_at=datetime.datetime(2000, 1, 1, 0, 0))
+            provision_updated_at=datetime.datetime(2000, 1, 1, 0, 0),
+            clean_step={
+                'interface': 'deploy',
+                'step': 'erase_devices'},
+            driver_internal_info={
+                'cleaning_reboot': manual,
+                'clean_step_index': 0})
 
         self.service._check_cleanwait_timeouts(self.context)
         self._stop_service()
@@ -1108,6 +1114,11 @@ class DoNodeDeployTearDownTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertEqual(states.CLEANFAIL, node.provision_state)
         self.assertEqual(tgt_prov_state, node.target_provision_state)
         self.assertIsNotNone(node.last_error)
+        # Test that cleaning parameters have been purged in order
+        # to prevent looping of the cleaning sequence
+        self.assertEqual({}, node.clean_step)
+        self.assertNotIn('clean_step_index', node.driver_internal_info)
+        self.assertNotIn('cleaning_reboot', node.driver_internal_info)
 
     def test__check_cleanwait_timeouts_automated_clean(self):
         self._check_cleanwait_timeouts()
@@ -2058,7 +2069,7 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
 
         deploy_exec_mock.return_value = None
         power_exec_mock.return_value = None
-        tear_mock.side_effect = Exception()
+        tear_mock.side_effect = Exception('boom')
 
         self._start_service()
 
@@ -2088,7 +2099,8 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         ]
         self.assertEqual(power_exec_calls, power_exec_mock.call_args_list)
         log_mock.exception.assert_called_once_with(
-            'Failed to tear down from cleaning for node {}'.format(node.uuid))
+            'Failed to tear down from cleaning for node {}, reason: boom'
+            .format(node.uuid))
 
     def test__do_next_clean_step_automated_fail_in_tear_down_cleaning(self):
         self._do_next_clean_step_fail_in_tear_down_cleaning()
@@ -2945,6 +2957,92 @@ class UpdatePortgroupTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertEqual(exception.NodeLocked, exc.exc_info[0])
         portgroup.refresh()
         self.assertEqual(old_extra, portgroup.extra)
+
+    def test_update_portgroup_to_node_in_deleting_state(self):
+        node = obj_utils.create_test_node(self.context, driver='fake')
+        portgroup = obj_utils.create_test_portgroup(self.context,
+                                                    node_id=node.id,
+                                                    extra={'foo': 'bar'})
+        update_node = obj_utils.create_test_node(
+            self.context, driver='fake',
+            provision_state=states.DELETING,
+            uuid=uuidutils.generate_uuid())
+
+        old_node_id = portgroup.node_id
+        portgroup.node_id = update_node.id
+        exc = self.assertRaises(messaging.rpc.ExpectedException,
+                                self.service.update_portgroup,
+                                self.context, portgroup)
+        self.assertEqual(exception.InvalidState, exc.exc_info[0])
+        portgroup.refresh()
+        self.assertEqual(old_node_id, portgroup.node_id)
+
+    @mock.patch.object(dbapi.IMPL, 'get_ports_by_portgroup_id')
+    def test_update_portgroup_to_node_in_manageable_state(self,
+                                                          mock_get_ports):
+        node = obj_utils.create_test_node(self.context, driver='fake')
+        portgroup = obj_utils.create_test_portgroup(self.context,
+                                                    node_id=node.id,
+                                                    extra={'foo': 'bar'})
+        update_node = obj_utils.create_test_node(
+            self.context, driver='fake',
+            provision_state=states.MANAGEABLE,
+            uuid=uuidutils.generate_uuid())
+        mock_get_ports.return_value = []
+
+        self._start_service()
+
+        portgroup.node_id = update_node.id
+        self.service.update_portgroup(self.context, portgroup)
+        portgroup.refresh()
+        self.assertEqual(update_node.id, portgroup.node_id)
+        mock_get_ports.assert_called_once_with(portgroup.uuid)
+
+    @mock.patch.object(dbapi.IMPL, 'get_ports_by_portgroup_id')
+    def test_update_portgroup_to_node_in_active_state_and_maintenance(
+            self, mock_get_ports):
+        node = obj_utils.create_test_node(self.context, driver='fake')
+        portgroup = obj_utils.create_test_portgroup(self.context,
+                                                    node_id=node.id,
+                                                    extra={'foo': 'bar'})
+        update_node = obj_utils.create_test_node(
+            self.context, driver='fake',
+            provision_state=states.ACTIVE,
+            maintenance=True,
+            uuid=uuidutils.generate_uuid())
+        mock_get_ports.return_value = []
+
+        self._start_service()
+
+        portgroup.node_id = update_node.id
+        self.service.update_portgroup(self.context, portgroup)
+        portgroup.refresh()
+        self.assertEqual(update_node.id, portgroup.node_id)
+        mock_get_ports.assert_called_once_with(portgroup.uuid)
+
+    @mock.patch.object(dbapi.IMPL, 'get_ports_by_portgroup_id')
+    def test_update_portgroup_association_with_ports(self, mock_get_ports):
+        node = obj_utils.create_test_node(self.context, driver='fake')
+        portgroup = obj_utils.create_test_portgroup(self.context,
+                                                    node_id=node.id,
+                                                    extra={'foo': 'bar'})
+        update_node = obj_utils.create_test_node(
+            self.context, driver='fake',
+            maintenance=True,
+            uuid=uuidutils.generate_uuid())
+        mock_get_ports.return_value = ['test_port']
+
+        self._start_service()
+
+        old_node_id = portgroup.node_id
+        portgroup.node_id = update_node.id
+        exc = self.assertRaises(messaging.rpc.ExpectedException,
+                                self.service.update_portgroup,
+                                self.context, portgroup)
+        self.assertEqual(exception.PortgroupNotEmpty, exc.exc_info[0])
+        portgroup.refresh()
+        self.assertEqual(old_node_id, portgroup.node_id)
+        mock_get_ports.assert_called_once_with(portgroup.uuid)
 
     @mock.patch('ironic.dhcp.neutron.NeutronDHCPApi.update_port_address')
     def test_update_portgroup_address(self, mac_update_mock):
@@ -3803,7 +3901,8 @@ class ManagerTestProperties(tests_db_base.DbTestCase):
         self._check_driver_properties("fake_ipminative", expected)
 
     def test_driver_properties_fake_ssh(self):
-        expected = ['ssh_address', 'ssh_username', 'ssh_virt_type',
+        expected = ['ssh_address', 'ssh_username',
+                    'vbox_use_headless', 'ssh_virt_type',
                     'ssh_key_contents', 'ssh_key_filename',
                     'ssh_password', 'ssh_port', 'ssh_terminal_port']
         self._check_driver_properties("fake_ssh", expected)
@@ -3843,7 +3942,8 @@ class ManagerTestProperties(tests_db_base.DbTestCase):
 
     def test_driver_properties_pxe_ssh(self):
         expected = ['deploy_kernel', 'deploy_ramdisk',
-                    'ssh_address', 'ssh_username', 'ssh_virt_type',
+                    'ssh_address', 'ssh_username',
+                    'vbox_use_headless', 'ssh_virt_type',
                     'ssh_key_contents', 'ssh_key_filename',
                     'ssh_password', 'ssh_port', 'ssh_terminal_port',
                     'deploy_forces_oob_reboot']

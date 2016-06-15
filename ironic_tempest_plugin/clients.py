@@ -22,14 +22,19 @@ from ironic_tempest_plugin.services.baremetal.v1.json.baremetal_client import \
 
 CONF = config.CONF
 
-ADMIN_CREDS = common_creds.get_configured_credentials('identity_admin')
+ADMIN_CREDS = common_creds.get_configured_admin_credentials()
 
 
 class Manager(clients.Manager):
     def __init__(self,
                  credentials=ADMIN_CREDS,
-                 service=None,
-                 api_microversions=None):
+                 service=None):
+        """Initialization of Manager class.
+
+        Setup service client and make it available for test cases.
+        :param credentials: type Credentials or TestResources
+        :param service: service name
+        """
         super(Manager, self).__init__(credentials, service)
         self.baremetal_client = BaremetalClient(
             self.auth_provider,
