@@ -1,6 +1,6 @@
 --- a/etc/ironic/ironic.conf.sample
 +++ b/etc/ironic/ironic.conf.sample
-@@ -205,6 +205,7 @@
+@@ -154,6 +154,7 @@
  # (string value)
  # Deprecated group/name - [DEFAULT]/logdir
  #log_dir = <None>
@@ -8,7 +8,7 @@
  
  # Uses logging handler designed to watch file system. When log
  # file is moved or removed this handler will open a new log
-@@ -804,6 +805,7 @@
+@@ -729,6 +730,7 @@
  # Deprecated group/name - [DATABASE]/sql_connection
  # Deprecated group/name - [sql]/connection
  #connection = <None>
