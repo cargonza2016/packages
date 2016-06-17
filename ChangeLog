@@ -1,6 +1,14 @@
 CHANGES
 =======
 
+* Change port used for Ironic static http to 3928
+* Centralize config options - [cimc]
+* Centralize config options - [console]
+* No need for 'default=None' in config variable
+* Fix typo in agent driver
+* Use assert_called_once_with in test_cleanup_cleanwait_timeout
+* Trivial comments fix
+* Remove workaround for nova removing instance_uuid during cleaning
 * Document support for APC AP7921
 * Updated from global requirements
 * Add cleanwait timeout cleanup process
@@ -17,6 +25,7 @@ CHANGES
 * Gracefully degrade start_iscsi_target for Mitaka ramdisk
 * Update the api-ref documentation for Drivers
 * Update comment from NOTE to TODO
+* Active Node Creation via adopt state
 * Update resources subnet CIDR
 * remove neutron stuff from devstack deb packages
 * Keep original error message when cleaning tear down fails

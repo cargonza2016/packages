@@ -87,6 +87,7 @@ devstack/upgrade/upgrade.sh
 doc/source/conf.py
 doc/source/index.rst
 doc/source/cmds/ironic-dbsync.rst
+doc/source/deploy/adoption.rst
 doc/source/deploy/cleaning.rst
 doc/source/deploy/drivers.rst
 doc/source/deploy/inspection.rst
@@ -214,6 +215,8 @@ ironic/conductor/rpcapi.py
 ironic/conductor/task_manager.py
 ironic/conductor/utils.py
 ironic/conf/__init__.py
+ironic/conf/cimc.py
+ironic/conf/console.py
 ironic/conf/opts.py
 ironic/db/__init__.py
 ironic/db/api.py
@@ -540,6 +543,7 @@ ironic_tempest_plugin/tests/scenario/test_baremetal_basic_ops.py
 releasenotes/notes/.placeholder
 releasenotes/notes/5.0-release-afb1fbbe595b6bc8.yaml
 releasenotes/notes/Add-port-option-support-to-ipmitool-e125d07fe13c53e7.yaml
+releasenotes/notes/active-node-creation-a41c9869c966c82b.yaml
 releasenotes/notes/add-agent-erase-fallback-b07613a7042fe236.yaml
 releasenotes/notes/add-agent-iboot-0a4b5471c6ace461.yaml
 releasenotes/notes/add-agent-proxy-support-790e629634ca2eb7.yaml
@@ -614,6 +618,7 @@ releasenotes/notes/manual-clean-4cc2437be1aea69a.yaml
 releasenotes/notes/name-root-device-hints-a1484ea01e399065.yaml
 releasenotes/notes/neutron-port-timeout-cbd82e1d09c6a46c.yaml
 releasenotes/notes/no-downward-sql-migration-52279e875cd8b7a3.yaml
+releasenotes/notes/no-instance-uuid-workaround-fc458deb168c7a8b.yaml
 releasenotes/notes/node-deletion-update-resources-53862e48ab658f77.yaml
 releasenotes/notes/node-name-remove-720aa8007f2f8b75.yaml
 releasenotes/notes/notimplementederror-misspell-276a181afd652cf6.yaml
