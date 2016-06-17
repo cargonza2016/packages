@@ -1086,24 +1086,6 @@ class TestPatch(test_api_base.BaseApiTest):
         self.assertEqual(http_client.BAD_REQUEST, response.status_code)
         self.assertTrue(response.json['error_message'])
 
-    def test_remove_instance_uuid_clean_backward_compat(self):
-        for state in (states.CLEANING, states.CLEANWAIT):
-            node = obj_utils.create_test_node(
-                self.context,
-                uuid=uuidutils.generate_uuid(),
-                provision_state=state,
-                target_provision_state=states.AVAILABLE)
-            self.mock_update_node.return_value = node
-            response = self.patch_json('/nodes/%s' % node.uuid,
-                                       [{'op': 'remove',
-                                         'path': '/instance_uuid'}])
-            self.assertEqual('application/json', response.content_type)
-            self.assertEqual(http_client.OK, response.status_code)
-            # NOTE(lucasagomes): instance_uuid is already removed as part of
-            # node's tear down, assert update has not been called. This test
-            # should be removed in the next cycle (Mitaka).
-            self.assertFalse(self.mock_update_node.called)
-
     def test_add_state_in_cleaning(self):
         node = obj_utils.create_test_node(
             self.context,
@@ -2183,6 +2165,93 @@ class TestPut(test_api_base.BaseApiTest):
         mock_check.assert_called_once_with(clean_steps)
         mock_rpcapi.assert_called_once_with(mock.ANY, self.node.uuid,
                                             clean_steps, 'test-topic')
+
+    def test_adopt_raises_error_before_1_17(self):
+        """Test that a lower API client cannot use the adopt verb"""
+        ret = self.put_json('/nodes/%s/states/provision' % self.node.uuid,
+                            {'target': states.VERBS['adopt']},
+                            headers={api_base.Version.string: "1.16"},
+                            expect_errors=True)
+        self.assertEqual(http_client.NOT_ACCEPTABLE, ret.status_code)
+
+    @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
+    def test_adopt_from_manage(self, mock_dpa):
+        """Test that a node can be adopted from the manageable state"""
+        self.node.provision_state = states.MANAGEABLE
+        self.node.save()
+
+        ret = self.put_json('/nodes/%s/states/provision' % self.node.uuid,
+                            {'target': states.VERBS['adopt']},
+                            headers={api_base.Version.string: "1.17"})
+        self.assertEqual(http_client.ACCEPTED, ret.status_code)
+        self.assertEqual(b'', ret.body)
+        mock_dpa.assert_called_once_with(mock.ANY, self.node.uuid,
+                                         states.VERBS['adopt'],
+                                         'test-topic')
+
+    @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
+    def test_adopt_from_adoption_failed(self, mock_dpa):
+        self.node.provision_state = states.ADOPTFAIL
+        self.node.save()
+
+        ret = self.put_json('/nodes/%s/states/provision' % self.node.uuid,
+                            {'target': states.VERBS['adopt']},
+                            headers={api_base.Version.string: "1.17"})
+        self.assertEqual(http_client.ACCEPTED, ret.status_code)
+        self.assertEqual(b'', ret.body)
+        mock_dpa.assert_called_once_with(mock.ANY, self.node.uuid,
+                                         states.VERBS['adopt'],
+                                         'test-topic')
+
+    @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
+    def test_adopt_from_active_fails(self, mock_dpa):
+        self.node.provision_state = states.ACTIVE
+        self.node.save()
+
+        ret = self.put_json('/nodes/%s/states/provision' % self.node.uuid,
+                            {'target': states.VERBS['adopt']},
+                            headers={api_base.Version.string: "1.17"},
+                            expect_errors=True)
+        self.assertEqual(http_client.BAD_REQUEST, ret.status_code)
+        self.assertEqual(0, mock_dpa.call_count)
+
+    @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
+    def test_manage_from_adoption_failed(self, mock_dpa):
+        self.node.provision_state = states.ADOPTFAIL
+        self.node.save()
+
+        ret = self.put_json('/nodes/%s/states/provision' % self.node.uuid,
+                            {'target': states.VERBS['manage']},
+                            headers={api_base.Version.string: "1.17"})
+        self.assertEqual(http_client.ACCEPTED, ret.status_code)
+        self.assertEqual(b'', ret.body)
+        mock_dpa.assert_called_once_with(mock.ANY, self.node.uuid,
+                                         states.VERBS['manage'],
+                                         'test-topic')
+
+    @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
+    def test_bad_requests_in_adopting_state(self, mock_dpa):
+        self.node.provision_state = states.ADOPTING
+        self.node.save()
+
+        for state in [states.ACTIVE, states.REBUILD, states.DELETED]:
+            ret = self.put_json('/nodes/%s/states/provision' % self.node.uuid,
+                                {'target': state},
+                                expect_errors=True)
+            self.assertEqual(http_client.BAD_REQUEST, ret.status_code)
+        self.assertEqual(0, mock_dpa.call_count)
+
+    @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
+    def test_bad_requests_in_adoption_failed_state(self, mock_dpa):
+        self.node.provision_state = states.ADOPTFAIL
+        self.node.save()
+
+        for state in [states.ACTIVE, states.REBUILD, states.DELETED]:
+            ret = self.put_json('/nodes/%s/states/provision' % self.node.uuid,
+                                {'target': state},
+                                expect_errors=True)
+            self.assertEqual(http_client.BAD_REQUEST, ret.status_code)
+        self.assertEqual(0, mock_dpa.call_count)
 
     def test_set_console_mode_enabled(self):
         with mock.patch.object(rpcapi.ConductorAPI,
