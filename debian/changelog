@@ -1,4 +1,4 @@
-ironic (1:5.1.1~dev373-0ubuntu1) UNRELEASED; urgency=medium
+ironic (1:5.1.1~dev388-1) UNRELEASED; urgency=medium
 
   [ James Page ]
   * New upstream version.
@@ -7,9 +7,8 @@ ironic (1:5.1.1~dev373-0ubuntu1) UNRELEASED; urgency=medium
   [ Corey Bryant ]
   * d/rules: Run tests with ostestr.
   * d/p/set_config_defaults.patch: Rebased.
-  * d/p/fix-test-cleanup-cleanwait-timeout.patch: Fix failing test.
 
- -- Corey Bryant <corey.bryant@canonical.com>  Wed, 15 Jun 2016 10:19:13 -0400
+ -- James Page <james.page@ubuntu.com>  Fri, 17 Jun 2016 10:54:40 +0100
 
 ironic (1:5.1.0-0ubuntu1) xenial; urgency=medium
 
