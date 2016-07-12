@@ -1,14 +1,15 @@
-ironic (1:5.1.1~dev388-1) UNRELEASED; urgency=medium
+ironic (1:6.0.0-0ubuntu1) UNRELEASED; urgency=medium
 
   [ James Page ]
   * New upstream version.
   * d/p/*: Refresh.
 
   [ Corey Bryant ]
+  * New upstream release for OpenStack Newton.
   * d/rules: Run tests with ostestr.
   * d/p/set_config_defaults.patch: Rebased.
 
- -- James Page <james.page@ubuntu.com>  Fri, 17 Jun 2016 10:54:40 +0100
+ -- Corey Bryant <corey.bryant@canonical.com>  Tue, 12 Jul 2016 09:44:17 -0400
 
 ironic (1:5.1.0-0ubuntu1) xenial; urgency=medium
 
