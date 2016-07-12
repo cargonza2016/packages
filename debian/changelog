@@ -6,6 +6,7 @@ ironic (1:6.0.0-0ubuntu1) UNRELEASED; urgency=medium
 
   [ Corey Bryant ]
   * New upstream release for OpenStack Newton.
+  * d/control: Align (Build-)Depends with upstream.
   * d/rules: Run tests with ostestr.
   * d/p/set_config_defaults.patch: Rebased.
 
