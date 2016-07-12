@@ -216,7 +216,11 @@ ironic/conductor/task_manager.py
 ironic/conductor/utils.py
 ironic/conf/__init__.py
 ironic/conf/cimc.py
+ironic/conf/cisco_ucs.py
+ironic/conf/conductor.py
 ironic/conf/console.py
+ironic/conf/database.py
+ironic/conf/dhcp.py
 ironic/conf/opts.py
 ironic/db/__init__.py
 ironic/db/api.py
@@ -583,6 +587,7 @@ releasenotes/notes/fix-api-access-logs-68b9ca4f411f339c.yaml
 releasenotes/notes/fix-api-node-name-updates-f3813295472795be.yaml
 releasenotes/notes/fix-clean-steps-not-running-0d065cb022bc0419.yaml
 releasenotes/notes/fix-cleaning-spawn-error-60b60281f3be51c2.yaml
+releasenotes/notes/fix-cve-2016-4985-b62abae577025365.yaml
 releasenotes/notes/fix-get-deploy-info-port.yaml
 releasenotes/notes/fix-ilo-firmware-update-swift-path-with-pseudo-folder-0660345510ec0bb4.yaml
 releasenotes/notes/fix-ipmi-numeric-password-75e080aa8bdfb9a2.yaml

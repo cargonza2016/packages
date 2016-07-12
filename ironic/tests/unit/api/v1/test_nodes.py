@@ -575,7 +575,7 @@ class TestListNodes(test_api_base.BaseApiTest):
         data = self.get_json('/nodes?associated=False&limit=2')
 
         self.assertThat(data['nodes'], HasLength(2))
-        self.assertTrue(data['nodes'][0]['uuid'] in unassociated_nodes)
+        self.assertIn(data['nodes'][0]['uuid'], unassociated_nodes)
 
     def test_next_link_with_association(self):
         self._create_association_test_nodes()
@@ -2190,7 +2190,8 @@ class TestPut(test_api_base.BaseApiTest):
                                          'test-topic')
 
     @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
-    def test_adopt_from_adoption_failed(self, mock_dpa):
+    def test_adopt_from_adoptfail(self, mock_dpa):
+        """Test that a node in ADOPTFAIL can be adopted"""
         self.node.provision_state = states.ADOPTFAIL
         self.node.save()
 
@@ -2205,6 +2206,7 @@ class TestPut(test_api_base.BaseApiTest):
 
     @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
     def test_adopt_from_active_fails(self, mock_dpa):
+        """Test that an ACTIVE node cannot be adopted"""
         self.node.provision_state = states.ACTIVE
         self.node.save()
 
@@ -2216,7 +2218,8 @@ class TestPut(test_api_base.BaseApiTest):
         self.assertEqual(0, mock_dpa.call_count)
 
     @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
-    def test_manage_from_adoption_failed(self, mock_dpa):
+    def test_manage_from_adoptfail(self, mock_dpa):
+        """Test that a node can be sent to MANAGEABLE from ADOPTFAIL"""
         self.node.provision_state = states.ADOPTFAIL
         self.node.save()
 
@@ -2231,6 +2234,12 @@ class TestPut(test_api_base.BaseApiTest):
 
     @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
     def test_bad_requests_in_adopting_state(self, mock_dpa):
+        """Test that a node in ADOPTING fails with invalid requests
+
+        Verify that an API request fails if the ACTIVE, REBUILD, or DELETED
+        state is requested by an API client when the node is in ADOPTING
+        state.
+        """
         self.node.provision_state = states.ADOPTING
         self.node.save()
 
@@ -2243,6 +2252,12 @@ class TestPut(test_api_base.BaseApiTest):
 
     @mock.patch.object(rpcapi.ConductorAPI, 'do_provisioning_action')
     def test_bad_requests_in_adoption_failed_state(self, mock_dpa):
+        """Test that a node in ADOPTFAIL fails with invalid requests
+
+        Verify that an API request fails if the ACTIVE, REBUILD, or DELETED
+        state is requested by an API client when the node is in ADOPTFAIL
+        state.
+        """
         self.node.provision_state = states.ADOPTFAIL
         self.node.save()
 
@@ -2503,59 +2518,59 @@ class TestPut(test_api_base.BaseApiTest):
 class TestCheckCleanSteps(base.TestCase):
     def test__check_clean_steps_not_list(self):
         clean_steps = {"step": "upgrade_firmware", "interface": "deploy"}
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                "not of type 'array'",
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               "not of type 'array'",
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_step_not_dict(self):
         clean_steps = ['clean step']
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                "not of type 'object'",
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               "not of type 'object'",
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_step_key_invalid(self):
         clean_steps = [{"step": "upgrade_firmware", "interface": "deploy",
                         "unknown": "upgrade_firmware"}]
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                'unexpected',
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               'unexpected',
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_step_missing_interface(self):
         clean_steps = [{"step": "upgrade_firmware"}]
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                'interface',
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               'interface',
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_step_missing_step_key(self):
         clean_steps = [{"interface": "deploy"}]
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                'step',
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               'step',
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_step_missing_step_value(self):
         clean_steps = [{"step": None, "interface": "deploy"}]
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                "not of type 'string'",
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               "not of type 'string'",
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_step_min_length_step_value(self):
         clean_steps = [{"step": "", "interface": "deploy"}]
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                'is too short',
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               'is too short',
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_step_interface_value_invalid(self):
         clean_steps = [{"step": "upgrade_firmware", "interface": "not"}]
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                'is not one of',
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               'is not one of',
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_step_args_value_invalid(self):
         clean_steps = [{"step": "upgrade_firmware", "interface": "deploy",
                         "args": "invalid args"}]
-        self.assertRaisesRegexp(exception.InvalidParameterValue,
-                                'args',
-                                api_node._check_clean_steps, clean_steps)
+        self.assertRaisesRegex(exception.InvalidParameterValue,
+                               'args',
+                               api_node._check_clean_steps, clean_steps)
 
     def test__check_clean_steps_valid(self):
         clean_steps = [{"step": "upgrade_firmware", "interface": "deploy"}]

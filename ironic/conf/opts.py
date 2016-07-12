@@ -14,7 +14,6 @@ import itertools
 
 import ironic.api
 import ironic.api.app
-import ironic.common.dhcp_factory
 import ironic.common.driver_factory
 import ironic.common.exception
 import ironic.common.glance_service.v2.image_service
@@ -26,9 +25,6 @@ import ironic.common.paths
 import ironic.common.service
 import ironic.common.swift
 import ironic.common.utils
-import ironic.conductor.base_manager
-import ironic.conductor.manager
-import ironic.db.sqlalchemy.models
 import ironic.dhcp.neutron
 import ironic.drivers.modules.agent
 import ironic.drivers.modules.agent_base_vendor
@@ -52,7 +48,6 @@ import ironic.drivers.modules.pxe
 import ironic.drivers.modules.seamicro
 import ironic.drivers.modules.snmp
 import ironic.drivers.modules.ssh
-import ironic.drivers.modules.ucs.power
 import ironic.drivers.modules.virtualbox
 import ironic.netconf
 
@@ -80,14 +75,12 @@ _opts = [
         ironic.drivers.modules.amt.power.opts)),
     ('api', ironic.api.API_SERVICE_OPTS),
     ('cimc', ironic.conf.cimc.opts),
-    ('cisco_ucs', ironic.drivers.modules.ucs.power.opts),
-    ('conductor', itertools.chain(
-        ironic.conductor.base_manager.conductor_opts,
-        ironic.conductor.manager.conductor_opts)),
+    ('cisco_ucs', ironic.conf.cisco_ucs.opts),
+    ('conductor', ironic.conf.conductor.opts),
     ('console', ironic.conf.console.opts),
-    ('database', ironic.db.sqlalchemy.models.sql_opts),
+    ('database', ironic.conf.database.opts),
     ('deploy', ironic.drivers.modules.deploy_utils.deploy_opts),
-    ('dhcp', ironic.common.dhcp_factory.dhcp_provider_opts),
+    ('dhcp', ironic.conf.dhcp.opts),
     ('glance', itertools.chain(
         ironic.common.glance_service.v2.image_service.glance_opts,
         ironic.common.image_service.glance_opts)),

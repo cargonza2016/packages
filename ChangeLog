@@ -1,11 +1,28 @@
 CHANGES
 =======
 
+6.0.0
+-----
+
+* Mask password on agent lookup according to policy
+* Replace assertRaisesRegexp with assertRaisesRegex
+* Replace dict.get(key) in drivers unit tests
+* Docs: Fix some typos in the documentation
+* Removes the use of mutables as default args
+* Follow-up to Active Node Creation
+* Replace dict.get(key) in drivers/modules/*/ tests
 * Change port used for Ironic static http to 3928
+* Centralize config options - [dhcp]
+* Centralize config options - [database]
+* Centralize config options - [conductor]
+* Centralize config options - [cisco_ucs]
 * Centralize config options - [cimc]
 * Centralize config options - [console]
 * No need for 'default=None' in config variable
 * Fix typo in agent driver
+* Use assertIn and assertNotIn
+* Document testing an in-review patch with devstack
+* Replace vif_portgroup_id with vif_port_id
 * Use assert_called_once_with in test_cleanup_cleanwait_timeout
 * Trivial comments fix
 * Remove workaround for nova removing instance_uuid during cleaning
@@ -237,7 +254,7 @@ CHANGES
 * Add ensure_thread_contain_context() to task_manager
 * [devstack] Do not die if neutron is disabled
 * Follow-up of firmware update(iLO) as manual cleaning step
-* Updating driver docs with DL hardwares requirements
+*  Updating driver docs with DL hardwares requirements
 * Remove unneeded 'wait=False' to be more clean and consistent
 * Pass region_name to SwiftAPI
 * Uses jsonschema library to verify clean steps
@@ -2265,7 +2282,7 @@ CHANGES
 * Use six.moves.urllib.parse instead of urlparse
 * Add string representation method to MultiType
 * Fix test migrations for alembic
-* Sync Oslo gettextutils module to Ironic
+* Sync Oslo gettextutils  module to Ironic
 * NodeLocked returns 503 error status
 * Supports OPERATOR priv level for ipmitool driver
 * Correct assertEqual order from patch e69e41c99fb
@@ -2607,7 +2624,7 @@ CHANGES
 * Updating resources with PATCH
 * Add missing unique constraint
 * Fix docstring typo
-* Removed templates directory in api config
+* Removed  templates directory in api config
 * Added upper version boundry for six
 * Sync models with migrations
 * Optimization reserve and release nodes db api methods

@@ -1473,7 +1473,7 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertEqual(exception.InvalidStateRequested, exc.exc_info[0])
         mock_validate.assert_called_once_with(mock.ANY)
         node.refresh()
-        self.assertFalse('clean_steps' in node.driver_internal_info)
+        self.assertNotIn('clean_steps', node.driver_internal_info)
 
     @mock.patch('ironic.conductor.manager.ConductorManager._spawn_worker')
     @mock.patch('ironic.drivers.modules.fake.FakePower.validate')
@@ -1609,8 +1609,8 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         if skip:
             expected_step_index = 1
         else:
-            self.assertFalse(
-                'skip_current_clean_step' in node.driver_internal_info)
+            self.assertNotIn(
+                'skip_current_clean_step', node.driver_internal_info)
             expected_step_index = 0
         mock_spawn.assert_called_with(self.service._do_next_clean_step,
                                       mock.ANY, expected_step_index)
@@ -1952,7 +1952,7 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertEqual(tgt_prov_state, node.provision_state)
         self.assertEqual(states.NOSTATE, node.target_provision_state)
         self.assertEqual({}, node.clean_step)
-        self.assertFalse('clean_step_index' in node.driver_internal_info)
+        self.assertNotIn('clean_step_index', node.driver_internal_info)
         self.assertIsNone(node.driver_internal_info['clean_steps'])
         self.assertFalse(mock_execute.called)
 
@@ -1992,7 +1992,7 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertEqual(tgt_prov_state, node.provision_state)
         self.assertEqual(states.NOSTATE, node.target_provision_state)
         self.assertEqual({}, node.clean_step)
-        self.assertFalse('clean_step_index' in node.driver_internal_info)
+        self.assertNotIn('clean_step_index', node.driver_internal_info)
         self.assertIsNone(node.driver_internal_info['clean_steps'])
         mock_power_execute.assert_called_once_with(mock.ANY,
                                                    self.clean_steps[1])
@@ -2037,7 +2037,7 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertEqual(states.CLEANFAIL, node.provision_state)
         self.assertEqual(tgt_prov_state, node.target_provision_state)
         self.assertEqual({}, node.clean_step)
-        self.assertFalse('clean_step_index' in node.driver_internal_info)
+        self.assertNotIn('clean_step_index', node.driver_internal_info)
         self.assertIsNotNone(node.last_error)
         self.assertTrue(node.maintenance)
         mock_execute.assert_called_once_with(mock.ANY, self.clean_steps[0])
@@ -2084,7 +2084,7 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertEqual(states.CLEANFAIL, node.provision_state)
         self.assertEqual(tgt_prov_state, node.target_provision_state)
         self.assertEqual({}, node.clean_step)
-        self.assertFalse('clean_step_index' in node.driver_internal_info)
+        self.assertNotIn('clean_step_index', node.driver_internal_info)
         self.assertIsNotNone(node.last_error)
         self.assertEqual(1, tear_mock.call_count)
         self.assertTrue(node.maintenance)
@@ -2137,7 +2137,7 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
             self.assertEqual(tgt_prov_state, node.provision_state)
             self.assertEqual(states.NOSTATE, node.target_provision_state)
             self.assertEqual({}, node.clean_step)
-            self.assertFalse('clean_step_index' in node.driver_internal_info)
+            self.assertNotIn('clean_step_index', node.driver_internal_info)
             self.assertFalse(mock_execute.called)
             mock_execute.reset_mock()
 
@@ -2176,7 +2176,7 @@ class DoNodeCleanTestCase(mgr_utils.ServiceSetUpMixin,
         self.assertEqual(states.CLEANFAIL, node.provision_state)
         self.assertEqual(tgt_prov_state, node.target_provision_state)
         self.assertEqual({}, node.clean_step)
-        self.assertFalse('clean_step_index' in node.driver_internal_info)
+        self.assertNotIn('clean_step_index', node.driver_internal_info)
         self.assertIsNotNone(node.last_error)
         self.assertTrue(node.maintenance)
         deploy_exec_mock.assert_called_once_with(mock.ANY,
@@ -3059,7 +3059,7 @@ class UpdatePortgroupTestCase(mgr_utils.ServiceSetUpMixin,
         node = obj_utils.create_test_node(self.context, driver='fake')
         pg = obj_utils.create_test_portgroup(
             self.context, node_id=node.id,
-            extra={'vif_portgroup_id': 'fake-id'})
+            extra={'vif_port_id': 'fake-id'})
         new_address = '11:22:33:44:55:bb'
         pg.address = new_address
         self.service.update_portgroup(self.context, pg)
@@ -3073,7 +3073,7 @@ class UpdatePortgroupTestCase(mgr_utils.ServiceSetUpMixin,
         node = obj_utils.create_test_node(self.context, driver='fake')
         pg = obj_utils.create_test_portgroup(
             self.context, node_id=node.id,
-            extra={'vif_portgroup_id': 'fake-id'})
+            extra={'vif_port_id': 'fake-id'})
         old_address = pg.address
         pg.address = '11:22:33:44:55:bb'
         mac_update_mock.side_effect = (
@@ -4886,6 +4886,7 @@ class DoNodeAdoptionTestCase(
                                         mock_start_console,
                                         mock_boot_validate,
                                         mock_power_validate):
+        """Test a successful node adoption"""
         self._start_service()
         node = obj_utils.create_test_node(
             self.context, driver='fake',
@@ -4902,6 +4903,7 @@ class DoNodeAdoptionTestCase(
         mock_take_over.assert_called_once_with(mock.ANY)
         self.assertFalse(mock_start_console.called)
         self.assertTrue(mock_boot_validate.called)
+        self.assertIn('is_whole_disk_image', task.node.driver_internal_info)
 
     @mock.patch('ironic.drivers.modules.fake.FakeBoot.validate')
     @mock.patch('ironic.drivers.modules.fake.FakeConsole.start_console')
@@ -4912,6 +4914,7 @@ class DoNodeAdoptionTestCase(
                                             mock_take_over,
                                             mock_start_console,
                                             mock_boot_validate):
+        """Test that adoption failed if an exception is raised"""
         # Note(TheJulia): Use of an actual possible exception that
         # can be raised due to a misconfiguration.
         mock_take_over.side_effect = exception.IPMIFailure(
@@ -4933,6 +4936,7 @@ class DoNodeAdoptionTestCase(
         mock_take_over.assert_called_once_with(mock.ANY)
         self.assertFalse(mock_start_console.called)
         self.assertTrue(mock_boot_validate.called)
+        self.assertIn('is_whole_disk_image', task.node.driver_internal_info)
 
     @mock.patch('ironic.drivers.modules.fake.FakeBoot.validate')
     @mock.patch('ironic.drivers.modules.fake.FakeConsole.start_console')
@@ -4943,6 +4947,7 @@ class DoNodeAdoptionTestCase(
                                                 mock_take_over,
                                                 mock_start_console,
                                                 mock_boot_validate):
+        """Test that adoption fails if the boot validation fails"""
         # Note(TheJulia): Use of an actual possible exception that
         # can be raised due to a misconfiguration.
         mock_boot_validate.side_effect = exception.MissingParameterValue(
@@ -4967,6 +4972,7 @@ class DoNodeAdoptionTestCase(
 
     @mock.patch('ironic.conductor.manager.ConductorManager._spawn_worker')
     def test_do_provisioning_action_adopt_node(self, mock_spawn):
+        """Test an adoption request results in the node in ADOPTING"""
         node = obj_utils.create_test_node(
             self.context, driver='fake',
             provision_state=states.MANAGEABLE,
@@ -4982,6 +4988,7 @@ class DoNodeAdoptionTestCase(
 
     @mock.patch('ironic.conductor.manager.ConductorManager._spawn_worker')
     def test_do_provisioning_action_adopt_node_retry(self, mock_spawn):
+        """Test a retried adoption from ADOPTFAIL results in ADOPTING state"""
         node = obj_utils.create_test_node(
             self.context, driver='fake',
             provision_state=states.ADOPTFAIL,
@@ -4996,6 +5003,7 @@ class DoNodeAdoptionTestCase(
         mock_spawn.assert_called_with(self.service._do_adoption, mock.ANY)
 
     def test_do_provisioning_action_manage_of_failed_adoption(self):
+        """Test a node in ADOPTFAIL can be taken to MANAGEABLE"""
         node = obj_utils.create_test_node(
             self.context, driver='fake',
             provision_state=states.ADOPTFAIL,
